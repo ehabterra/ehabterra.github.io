@@ -1,3 +1,12 @@
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-RXWM6BBFPQ"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-RXWM6BBFPQ');
+</script>
 
 # Go 1.20’s `errors.Join` and the Great Unwrap Mystery: A Developer’s Journey
 
