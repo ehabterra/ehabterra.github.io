@@ -1,3 +1,11 @@
+---
+layout: post
+key: blog
+title: "Why Audit Logging Doesn't Belong in Your Main Database"
+date: 2025-06-03
+tags: [AuditLogging StructuredLogging CloudComputing GCP AWS GoLang BackendEngineering DevOps Security Compliance DataArchitecture]
+mermaid: true
+---
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-RXWM6BBFPQ"></script>
 <script>
@@ -133,33 +141,33 @@ G -. "No Log Spam Here!" 🚫 .-> B
 
 #### **Resources**
 
-1. Audit Logging: What It Is & How It Works | Datadog, [https://www.datadoghq.com/knowledge-center/audit-logging/](https://www.datadoghq.com/knowledge-center/audit-logging/)
+1. Audit Logging: What It Is & How It Works , Datadog, [https://www.datadoghq.com/knowledge-center/audit-logging/](https://www.datadoghq.com/knowledge-center/audit-logging/)
 2. Audit Trail - OutSystems 11 Documentation, [https://success.outsystems.com/documentation/11/app_architecture/audit_trail/](https://success.outsystems.com/documentation/11/app_architecture/audit_trail/)
 3. Real-Time and Periodic Database Auditing: What Is Better? - DataSunrise, [https://www.datasunrise.com/knowledge-center/real-time-vs-periodic-database-auditing/](https://www.datasunrise.com/knowledge-center/real-time-vs-periodic-database-auditing/)
 4. Introducing SQL Audit Logs for Fabric Data Warehouse - Microsoft Fabric Blog, [https://blog.fabric.microsoft.com/en-US/blog/introducing-sql-audit-logs-for-fabric-datawarehouse/](https://blog.fabric.microsoft.com/en-US/blog/introducing-sql-audit-logs-for-fabric-datawarehouse/)
 5. Best BI / Monitoring / Logging Tools - Plutora.com, [https://www.plutora.com/ci-cd-tools-categories/bi-monitoring-logging](https://www.plutora.com/ci-cd-tools-categories/bi-monitoring-logging)
 6. Pattern: Audit logging - Microservices.io, [https://microservices.io/patterns/observability/audit-logging.html](https://microservices.io/patterns/observability/audit-logging.html)
-7. Monitoring and Reducing Database I/O Contention - BizTalk Server | Microsoft Learn, [https://learn.microsoft.com/en-us/biztalk/technical-guides/monitoring-and-reducing-database-i-o-contention](https://learn.microsoft.com/en-us/biztalk/technical-guides/monitoring-and-reducing-database-i-o-contention)
+7. Monitoring and Reducing Database I/O Contention - BizTalk Server , Microsoft Learn, [https://learn.microsoft.com/en-us/biztalk/technical-guides/monitoring-and-reducing-database-i-o-contention](https://learn.microsoft.com/en-us/biztalk/technical-guides/monitoring-and-reducing-database-i-o-contention)
 8. Monitoring and Reducing DTC Log File Disk I/O Contention - BizTalk Server, [https://learn.microsoft.com/en-us/biztalk/technical-guides/monitoring-and-reducing-dtc-log-file-disk-i-o-contention](https://learn.microsoft.com/en-us/biztalk/technical-guides/monitoring-and-reducing-dtc-log-file-disk-i-o-contention)
 9. How does throughput impact database performance? - Milvus, [https://milvus.io/ai-quick-reference/how-does-throughput-impact-database-performance](https://milvus.io/ai-quick-reference/how-does-throughput-impact-database-performance)
 10. Database Performance: Impact of Storage Limitations - Simplyblock, [https://www.simplyblock.io/blog/database-performance-storage-limitations/](https://www.simplyblock.io/blog/database-performance-storage-limitations/)
 11. What Is Structured Logging and Why You Should Use It - Sematext, [https://sematext.com/glossary/structured-logging/](https://sematext.com/glossary/structured-logging/)
 12. The Power of Structured Logging: Why It Matters in Modern Development - Atatus, [https://www.atatus.com/blog/structured-logging-guide/](https://www.atatus.com/blog/structured-logging-guide/)
 13. 5 Elk Stack Pros and Cons - ChaosSearch, [https://www.chaossearch.io/blog/elk-stack-pros-and-cons](https://www.chaossearch.io/blog/elk-stack-pros-and-cons)
-14. Centralized Logging Systems – System Design | GeeksforGeeks, [https://www.geeksforgeeks.org/centralized-logging-systems-system-design/](https://www.geeksforgeeks.org/centralized-logging-systems-system-design/)
+14. Centralized Logging Systems – System Design , GeeksforGeeks, [https://www.geeksforgeeks.org/centralized-logging-systems-system-design/](https://www.geeksforgeeks.org/centralized-logging-systems-system-design/)
 15. What Is Structured Logging and How to Use It - Loggly, [https://www.loggly.com/use-cases/what-is-structured-logging-and-how-to-use-it/](https://www.loggly.com/use-cases/what-is-structured-logging-and-how-to-use-it/)
 16. Structured Logging Best Practices: Implementation Guide with Examples - Uptrace, [https://uptrace.dev/glossary/structured-logging](https://uptrace.dev/glossary/structured-logging)
 17. Best 10 Audit Tools of 2025 - ComplianceQuest, [https://www.compliancequest.com/audit-tools/](https://www.compliancequest.com/audit-tools/)
-18. 6 Common Log File Formats | CrowdStrike, [https://www.crowdstrike.com/en-us/cybersecurity-101/next-gen-siem/log-file-formats/](https://www.crowdstrike.com/en-us/cybersecurity-101/next-gen-siem/log-file-formats/)
+18. 6 Common Log File Formats , CrowdStrike, [https://www.crowdstrike.com/en-us/cybersecurity-101/next-gen-siem/log-file-formats/](https://www.crowdstrike.com/en-us/cybersecurity-101/next-gen-siem/log-file-formats/)
 19. logging package - cloud.google.com/go/logging - Go Packages, [https://pkg.go.dev/cloud.google.com/go/logging](https://pkg.go.dev/cloud.google.com/go/logging)
 20. Setting Up Cloud Logging for Go - Google Cloud, [https://cloud.google.com/logging/docs/setup/go](https://cloud.google.com/logging/docs/setup/go)
 21. Logging to stderr and stdout golang Google Cloud Platform - Stack Overflow, [https://stackoverflow.com/questions/57888588/logging-to-stderr-and-stdout-golang-google-cloud-platform](https://stackoverflow.com/questions/57888588/logging-to-stderr-and-stdout-golang-google-cloud-platform)
-22. Logging client libraries | Google Cloud, [https://cloud.google.com/logging/docs/reference/libraries](https://cloud.google.com/logging/docs/reference/libraries)
+22. Logging client libraries , Google Cloud, [https://cloud.google.com/logging/docs/reference/libraries](https://cloud.google.com/logging/docs/reference/libraries)
 23. Cloud Logging documentation - Google Cloud, [https://cloud.google.com/logging/docs](https://cloud.google.com/logging/docs)
-24. Cloud Logging overview | Google Cloud, [https://cloud.google.com/logging/docs/overview](https://cloud.google.com/logging/docs/overview)
-25. Audit logging | Cloud Search - Google for Developers, [https://developers.google.com/workspace/cloud-search/docs/guides/audit-logging-manual](https://developers.google.com/workspace/cloud-search/docs/guides/audit-logging-manual)
+24. Cloud Logging overview , Google Cloud, [https://cloud.google.com/logging/docs/overview](https://cloud.google.com/logging/docs/overview)
+25. Audit logging , Cloud Search - Google for Developers, [https://developers.google.com/workspace/cloud-search/docs/guides/audit-logging-manual](https://developers.google.com/workspace/cloud-search/docs/guides/audit-logging-manual)
 26. Cloud Audit Logs overview - Google Cloud, [https://cloud.google.com/logging/docs/audit](https://cloud.google.com/logging/docs/audit)
-27. Import logs from Cloud Storage to Cloud Logging | Cloud Architecture Center | Google Cloud, [https://cloud.google.com/architecture/import-logs-from-storage-to-logging](https://cloud.google.com/architecture/import-logs-from-storage-to-logging)
+27. Import logs from Cloud Storage to Cloud Logging , Cloud Architecture Center , Google Cloud, [https://cloud.google.com/architecture/import-logs-from-storage-to-logging](https://cloud.google.com/architecture/import-logs-from-storage-to-logging)
 28. AWS services for logging and monitoring - AWS Prescriptive Guidance - AWS Documentation, [https://docs.aws.amazon.com/prescriptive-guidance/latest/logging-monitoring-for-application-owners/aws-services-logging-monitoring.html](https://docs.aws.amazon.com/prescriptive-guidance/latest/logging-monitoring-for-application-owners/aws-services-logging-monitoring.html)
 29. Logging and monitoring in AWS Audit Manager, [https://docs.aws.amazon.com/audit-manager/latest/userguide/security-logging-and-monitoring.html](https://docs.aws.amazon.com/audit-manager/latest/userguide/security-logging-and-monitoring.html)
 30. Architecture overview - Centralized Logging with OpenSearch - AWS Documentation, [https://docs.aws.amazon.com/solutions/latest/centralized-logging-with-opensearch/architecture-overview.html](https://docs.aws.amazon.com/solutions/latest/centralized-logging-with-opensearch/architecture-overview.html)
