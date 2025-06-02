@@ -1,5 +1,11 @@
-{%- raw -%}
-{% if page.mermaid %}
-{% include mermaid.html %}
-{% endif %}
-{% endraw %}
+<script type="text/javascript"
+        src="https://unpkg.com/mermaid@11.6.0/dist/mermaid.min.js">
+</script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    mermaid.initialize({
+      theme: 'default',
+      startOnLoad: true
+    });
+  });
+</script>
