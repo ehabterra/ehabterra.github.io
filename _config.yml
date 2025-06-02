@@ -1,2 +1,13 @@
 markdown: kramdown
 highlighter: rouge
+plugins:
+  - jekyll-mermaid2
+
+kramdown:
+  syntax_highlighter: rouge
+  syntax_highlighter_opts:
+    default_lang: go
+
+mermaid:
+  theme: dark
+  fontFamily: "Fira Code"

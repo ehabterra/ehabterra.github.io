@@ -1,0 +1,8 @@
+{% if site.mermaid.enable %}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    import("https://unpkg.com/mermaid@11.6.0/dist/mermaid.esm.min.mjs")
+      .then(m => m.default.initialize({ startOnLoad: true }))
+  });
+</script>
+{% endif %}
