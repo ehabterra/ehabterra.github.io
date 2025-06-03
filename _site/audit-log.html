@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html>
+<head>
+  
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.6.0/dist/mermaid.min.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Fix for Rouge highlighter conflict
+    document.querySelectorAll('code.language-mermaid').forEach((el) => {
+      el.classList.remove('language-mermaid');
+      el.classList.add('mermaid');
+      el.parentElement.classList.add('mermaid-container');
+    });
+
+    mermaid.initialize({
+      theme: 'dark',
+      startOnLoad: true,
+      fontFamily: 'Arial'
+    });
+  });
+</script>
+
+
+<!-- Minimal Mistakes assets -->
+<link rel="stylesheet" href="/assets/css/main.css">
+<!-- For documents/pages whose URLs can change... -->
+<title>🔥 Why Audit Logging Doesn't Belong in Your Main Database</title>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-RXWM6BBFPQ"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-RXWM6BBFPQ');
+</script>
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>🔥 Why Audit Logging Doesn’t Belong in Your Main Database | Ehab’s Website</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="🔥 Why Audit Logging Doesn’t Belong in Your Main Database" />
+<meta name="author" content="Ehab Terra" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="How to implement scalable audit trails without compromising database performance" />
+<meta property="og:description" content="How to implement scalable audit trails without compromising database performance" />
+<link rel="canonical" href="http://localhost:4000/audit-log" />
+<meta property="og:url" content="http://localhost:4000/audit-log" />
+<meta property="og:site_name" content="Ehab’s Website" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2025-06-03T00:00:00+03:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="🔥 Why Audit Logging Doesn’t Belong in Your Main Database" />
+<meta name="twitter:site" content="@" />
+<meta name="twitter:creator" content="@Ehab Terra" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Ehab Terra"},"dateModified":"2025-06-03T00:00:00+03:00","datePublished":"2025-06-03T00:00:00+03:00","description":"How to implement scalable audit trails without compromising database performance","headline":"🔥 Why Audit Logging Doesn’t Belong in Your Main Database","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/audit-log"},"url":"http://localhost:4000/audit-log"}</script>
+<!-- End Jekyll SEO tag -->
+
+<link type="application/atom+xml" rel="alternate" href="http://localhost:4000/feed.xml" title="Ehab&apos;s Website" />
+
+</head>
+<body class="layout--single" dir="ltr">
+<nav class="skip-links">
+  <ul>
+    <li><a href="#site-nav" class="screen-reader-shortcut">Skip to primary navigation</a></li>
+    <li><a href="#main" class="screen-reader-shortcut">Skip to content</a></li>
+    <li><a href="#footer" class="screen-reader-shortcut">Skip to footer</a></li>
+  </ul>
+</nav>
+
+
+
+<div class="masthead">
+  <div class="masthead__inner-wrap">
+    <div class="masthead__menu">
+      <nav id="site-nav" class="greedy-nav">
+        
+        <a class="site-title" href="/">
+          Ehab's Website
+          
+        </a>
+        <ul class="visible-links"><li class="masthead__menu-item">
+              <a
+                href="/"
+                
+                
+              >Home</a>
+            </li><li class="masthead__menu-item">
+              <a
+                href="/year-archive/"
+                
+                
+              >Posts</a>
+            </li><li class="masthead__menu-item">
+              <a
+                href="/categories/"
+                
+                
+              >Categories</a>
+            </li><li class="masthead__menu-item">
+              <a
+                href="/tags/"
+                
+                
+              >Tags</a>
+            </li><li class="masthead__menu-item">
+              <a
+                href="/page-archive/"
+                
+                
+              >Pages</a>
+            </li><li class="masthead__menu-item">
+              <a
+                href="/collection-archive/"
+                
+                
+              >Collections</a>
+            </li></ul>
+        
+        <button class="greedy-nav__toggle hidden" type="button">
+          <span class="visually-hidden">Toggle menu</span>
+          <div class="navicon"></div>
+        </button>
+        <ul class="hidden-links hidden"></ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+
+<div class="initial-content">
+  
+  
+
+
+
+
+
+
+
+<div class="page__hero"
+  style=" background-image: url('');"
+>
+  
+    <img src="/assets/images/audit_log.png" alt="🔥 Why Audit Logging Doesn’t Belong in Your Main Database" class="page__hero-image">
+  
+  
+</div>
+
+
+
+
+
+
+  
+    
+
+
+
+<nav class="breadcrumbs">
+  <ol itemscope itemtype="https://schema.org/BreadcrumbList">
+    
+    
+    
+      
+        <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+          <a href="/" itemprop="item"><span itemprop="name">Home</span></a>
+
+          <meta itemprop="position" content="1" />
+        </li>
+        <span class="sep">/</span>
+      
+      
+        <li class="current">🔥 Why Audit Logging Doesn't Belong in Your Main Database</li>
+      
+    
+  </ol>
+</nav>
+
+  
+
+
+<div id="main" role="main">
+  
+  <div class="sidebar sticky">
+  
+
+
+<div itemscope itemtype="https://schema.org/Person" class="h-card">
+
+  
+
+  <div class="author__content">
+    <h3 class="author__name p-name" itemprop="name">
+      <a class="u-url" rel="me" href="http://localhost:4000/" itemprop="url"></a>
+    </h3>
+    
+  </div>
+
+  <div class="author__urls-wrapper">
+    <button class="btn btn--inverse">Follow</button>
+    <ul class="author__urls social-icons">
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <!--
+  <li>
+    <a href="http://link-to-whatever-social-network.com/user/" itemprop="sameAs" rel="nofollow noopener noreferrer me">
+      <i class="fas fa-fw" aria-hidden="true"></i> Custom Social Profile Link
+    </a>
+  </li>
+-->
+    </ul>
+  </div>
+</div>
+
+  
+  </div>
+
+
+
+  <article class="page" itemscope itemtype="https://schema.org/CreativeWork">
+    <meta itemprop="headline" content="🔥 Why Audit Logging Doesn’t Belong in Your Main Database">
+    <meta itemprop="description" content="How to implement scalable audit trails without compromising database performance">
+    <meta itemprop="datePublished" content="2025-06-03T00:00:00+03:00">
+    
+
+    <div class="page__inner-wrap">
+      
+        <header>
+          <h1 id="page-title" class="page__title" itemprop="headline">
+            <a href="http://localhost:4000/audit-log" itemprop="url">🔥 Why Audit Logging Doesn’t Belong in Your Main Database
+</a>
+          </h1>
+          
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2025-06-03T00:00:00+03:00">June 3, 2025</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-clock" aria-hidden="true"></i>
+        
+          5 minute read
+        
+      </span>
+    
+  </p>
+
+
+        </header>
+      
+
+      <section class="page__content" itemprop="text">
+        
+          <aside class="sidebar__right ">
+            <nav class="toc">
+              <header><h4 class="nav__title"><i class="fas fa-file-alt"></i> On this page</h4></header>
+              <ul class="toc__menu"><li><a href="#-the-hidden-costs">🚨 The Hidden Costs</a><ul><li><a href="#real-world-impact">Real-world impact:</a></li><li><a href="#the-solution-structured-logging--decoupled-architecture-">The Solution: Structured Logging &amp; Decoupled Architecture ✨</a></li><li><a href="#empowering-business-admins-reporting--querying-">Empowering Business Admins: Reporting &amp; Querying 📊</a></li><li><a href="#gcp-cloud-logging-with-golang-example-">GCP Cloud Logging with GoLang Example 🚀</a><ul><li><a href="#log-to-cloud-logging">Log to Cloud Logging:</a></li><li><a href="#query-in-bigquery">Query in BigQuery:</a></li></ul></li><li><a href="#our-awesome-audit-trail-blueprint-️">Our Awesome Audit Trail Blueprint! 🏗️</a></li><li><a href="#-key-takeaways">🧩 Key Takeaways</a><ul><li><a href="#resources">Resources</a></li></ul></li></ul></li></ul>
+            </nav>
+          </aside>
+        
+        <p>How to implement scalable audit trails without compromising database performance</p>
+
+<p><strong>Let’s fix a common anti-pattern:</strong> Storing audit logs in your production database. It <em>seems</em> easy—until it tanks performance and bloats storage.</p>
+
+<p>I learned this lesson the hard way. A colleague once insisted on implementing audit logs directly in our main DB, dismissing my concerns. Days later, it was done. I warned him of the impending database doom. Months passed, and then the inevitable: a frantic message about our database ballooning by a staggering 600MB per minute, causing critical issues that demanded immediate action.</p>
+
+<h2 id="-the-hidden-costs">🚨 The Hidden Costs</h2>
+
+<pre><code class="language-mermaid">pie
+    title "Database Pain Points from Audit Logs"
+    "Slowed Transactions" : 35
+    "Storage Bloat" : 25
+    "Backup Overhead" : 20
+    "Lock Contention" : 20
+</code></pre>
+
+<h3 id="real-world-impact">Real-world impact:</h3>
+
+<ul>
+  <li>
+    <p>40% slower writes during peak</p>
+  </li>
+  <li>
+    <p>3x storage growth in 6 months</p>
+  </li>
+  <li>
+    <p>Compliance reports timing out</p>
+  </li>
+</ul>
+
+<h3 id="the-solution-structured-logging--decoupled-architecture-"><strong>The Solution: Structured Logging &amp; Decoupled Architecture ✨</strong></h3>
+
+<p>The path to a robust, scalable, and cost-effective audit logging strategy involves two key pillars:</p>
+
+<ol>
+  <li>Structured Logging:
+Move beyond plain text! Format your logs as machine-readable key-value pairs, ideally JSON. This transforms logs into actionable data, enabling:
+    <ul>
+      <li><strong>Enhanced Searchability &amp; Filtering:</strong> Quickly find specific events by user_id, event_type, error_code, etc.</li>
+      <li><strong>Automated Analysis:</strong> Seamless integration with log management and SIEM tools.</li>
+      <li><strong>Improved Debugging:</strong> Rich context helps pinpoint root causes faster.</li>
+      <li><strong>Consistency &amp; Scalability:</strong> Standardized formats across distributed systems.</li>
+    </ul>
+
+    <p><strong>Best Practice:</strong> Always use UTC and ISO 8601 for timestamps (e.g., 2025-01-08T14:30:00Z). <strong>Never log sensitive data</strong> like passwords or PII.</p>
+
+    <div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="c">// Go: JSON-structured log example</span>
+ <span class="k">type</span> <span class="n">AuditEvent</span> <span class="k">struct</span> <span class="p">{</span>
+     <span class="n">Timestamp</span> <span class="kt">string</span> <span class="s">`json:"timestamp"`</span> <span class="c">// ISO 8601 UTC</span>
+     <span class="n">UserID</span>    <span class="kt">string</span> <span class="s">`json:"user_id"`</span> 
+     <span class="n">Action</span>    <span class="kt">string</span> <span class="s">`json:"action"`</span>   <span class="c">// "login", "delete"</span>
+     <span class="n">Entity</span>    <span class="kt">string</span> <span class="s">`json:"entity"`</span>   <span class="c">// "order", "user"</span>
+ <span class="p">}</span>
+</code></pre></div>    </div>
+
+    <p><strong>Why?</strong></p>
+    <ul>
+      <li>Enables filtering by <code class="language-plaintext highlighter-rouge">user_id</code>, <code class="language-plaintext highlighter-rouge">action</code>, etc.
+        <ul>
+          <li>Integrates seamlessly with Security Information and Event Management (SIEM) tools</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li>Decoupled Cloud Storage &amp; Reporting:<br />
+Offload audit logs to purpose-built cloud services. This ensures your main application database remains performant and allows for specialized tools for analysis and reporting.<br />
+<strong>Cloud Alternatives for Audit Logs:</strong>
+    <ul>
+      <li><strong>Google Cloud Platform (GCP):</strong>
+        <ul>
+          <li><strong>Cloud Logging:</strong> Fully managed service for log storage, search, analysis, monitoring, and alerting. Use Log Buckets for storage and Logs Explorer/Analytics for querying.</li>
+          <li><strong>BigQuery:</strong> For complex analytical SQL queries on large log datasets.</li>
+          <li><strong>Cloud Storage:</strong> Cost-effective for long-term archival.</li>
+        </ul>
+      </li>
+      <li><strong>Amazon Web Services (AWS):</strong>
+        <ul>
+          <li><strong>CloudTrail:</strong> Records AWS API calls for governance and compliance.</li>
+          <li><strong>CloudWatch Logs:</strong> Centralizes logs from applications and AWS services for real-time monitoring.</li>
+          <li><strong>Amazon S3:</strong> Highly scalable object storage for long-term archival.</li>
+          <li><strong>Amazon OpenSearch Service:</strong> For powerful log analysis and visualization (part of the ELK stack).</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+</ol>
+
+<h3 id="empowering-business-admins-reporting--querying-"><strong>Empowering Business Admins: Reporting &amp; Querying 📊</strong></h3>
+
+<p>Audit logs aren’t just for tech teams; they’re a goldmine for business intelligence! Build a separate reporting layer, ideally a data warehouse or data mart, optimized for analytical queries. This empowers back-office teams with:</p>
+
+<ul>
+  <li><strong>Intuitive Search &amp; Query:</strong> Easy access to specific user actions, transactions, or compliance data.</li>
+  <li><strong>Data Visualization:</strong> Dashboards, charts, and trendlines for quick insights.</li>
+  <li><strong>Automated Alerting:</strong> Proactive notifications for security violations or business rule breaches.</li>
+  <li><strong>Compliance Verification:</strong> Streamlined generation of audit trails for regulatory needs.</li>
+</ul>
+
+<p><strong>Tools:</strong> Generic log management platforms like the <strong>ELK Stack (Elasticsearch, Logstash, Kibana)</strong>, cloud-native services (GCP Cloud Logging Analytics, AWS CloudWatch Logs), and specialized audit management software such as ComplianceQuest, AuditBoard, etc.</p>
+
+<h3 id="gcp-cloud-logging-with-golang-example-"><strong>GCP Cloud Logging with GoLang Example 🚀</strong></h3>
+
+<p>Here’s how you can create and query structured audit logs using Go with GCP Cloud Logging:</p>
+<h4 id="log-to-cloud-logging">Log to Cloud Logging:</h4>
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">func</span> <span class="n">logAudit</span><span class="p">(</span><span class="n">event</span> <span class="n">AuditEvent</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+    <span class="n">entry</span> <span class="o">:=</span> <span class="n">logging</span><span class="o">.</span><span class="n">Entry</span><span class="p">{</span>
+        <span class="n">Payload</span><span class="o">:</span>   <span class="n">event</span><span class="p">,</span>
+        <span class="n">Severity</span><span class="o">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">Info</span><span class="p">,</span>
+    <span class="p">}</span>
+	
+    <span class="k">return</span> <span class="n">logger</span><span class="o">.</span><span class="n">Log</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span> <span class="c">// Async by default</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<h4 id="query-in-bigquery">Query in BigQuery:</h4>
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">-- Daily active users report</span>
+<span class="k">SELECT</span>
+  <span class="k">COUNT</span><span class="p">(</span><span class="k">DISTINCT</span> <span class="n">user_id</span><span class="p">)</span> <span class="k">AS</span> <span class="n">active_users</span><span class="p">,</span>
+  <span class="nb">DATE</span><span class="p">(</span><span class="nb">timestamp</span><span class="p">)</span> <span class="k">AS</span> <span class="k">day</span>
+<span class="k">FROM</span> <span class="nv">`project.audit.logs`</span>
+<span class="k">GROUP</span> <span class="k">BY</span> <span class="k">day</span>
+</code></pre></div></div>
+
+<h3 id="our-awesome-audit-trail-blueprint-️"><strong>Our Awesome Audit Trail Blueprint! 🏗️</strong></h3>
+
+<pre><code class="language-mermaid">graph TD
+    A[Your App/Service ✍️] -- Sends neatly packed logs (Structured Logs!) --&gt; B(Log Central: Cloud Logging ☁️ / CloudWatch Logs 🦉 / Fluentd 🚀)
+B -- Routes those log packages 📬 --&gt; C{Log Vault: Cloud Buckets 📦 / S3 🗄️ / Elasticsearch 🔍}
+C -- For serious analysis &amp; long-term storage 💾 --&gt; D[Data Brain: Data Warehouse 🧠 / BigQuery 📊 / OpenSearch 🔭 / ClickHouse ⚡]
+D -- Turns data into cool pictures &amp; insights 📈 --&gt; E[Insight Hub: BI Tools 💡 / Custom Dashboards 🖼️ / Kibana ✨ / Grafana 📊]
+E -- Delivers the juicy details &amp; alerts 🚨 --&gt; F[Biz Admins 💼 / Security Squad 🛡️]
+A -- Keeps doing its main job 🏃‍♂️ --&gt; G[Main App DB 💾]
+G -. "No Log Spam Here!" 🚫 .-&gt; B
+</code></pre>
+
+<p><strong>In short:</strong> We’re giving your audit logs their own awesome pipeline so they can be super useful without making your main app slow and grumpy! 😎</p>
+
+<h3 id="-key-takeaways">🧩 Key Takeaways</h3>
+<ol>
+  <li><strong>Never log to production DB –</strong> it’s for transactions, not analytics.</li>
+  <li><strong>Structure your logs –</strong> JSON/Protobuf &gt; plain text.</li>
+  <li><strong>Use cloud-native tools –</strong> GCP/AWS handle scaling and retention.</li>
+</ol>
+
+<p><strong>👉 Ready to level up your logging game?</strong> Let me know your thoughts or share how you manage audit logs in your projects!</p>
+
+<p>#AuditLogging #StructuredLogging #CloudComputing #GCP #AWS #GoLang #BackendEngineering #DevOps #Security #Compliance #DataArchitecture</p>
+
+<h4 id="resources"><strong>Resources</strong></h4>
+
+<ol>
+  <li>Audit Logging: What It Is &amp; How It Works , Datadog, <a href="https://www.datadoghq.com/knowledge-center/audit-logging/">https://www.datadoghq.com/knowledge-center/audit-logging/</a></li>
+  <li>Audit Trail - OutSystems 11 Documentation, <a href="https://success.outsystems.com/documentation/11/app_architecture/audit_trail/">https://success.outsystems.com/documentation/11/app_architecture/audit_trail/</a></li>
+  <li>Real-Time and Periodic Database Auditing: What Is Better? - DataSunrise, <a href="https://www.datasunrise.com/knowledge-center/real-time-vs-periodic-database-auditing/">https://www.datasunrise.com/knowledge-center/real-time-vs-periodic-database-auditing/</a></li>
+  <li>Introducing SQL Audit Logs for Fabric Data Warehouse - Microsoft Fabric Blog, <a href="https://blog.fabric.microsoft.com/en-US/blog/introducing-sql-audit-logs-for-fabric-datawarehouse/">https://blog.fabric.microsoft.com/en-US/blog/introducing-sql-audit-logs-for-fabric-datawarehouse/</a></li>
+  <li>Best BI / Monitoring / Logging Tools - Plutora.com, <a href="https://www.plutora.com/ci-cd-tools-categories/bi-monitoring-logging">https://www.plutora.com/ci-cd-tools-categories/bi-monitoring-logging</a></li>
+  <li>Pattern: Audit logging - Microservices.io, <a href="https://microservices.io/patterns/observability/audit-logging.html">https://microservices.io/patterns/observability/audit-logging.html</a></li>
+  <li>Monitoring and Reducing Database I/O Contention - BizTalk Server , Microsoft Learn, <a href="https://learn.microsoft.com/en-us/biztalk/technical-guides/monitoring-and-reducing-database-i-o-contention">https://learn.microsoft.com/en-us/biztalk/technical-guides/monitoring-and-reducing-database-i-o-contention</a></li>
+  <li>Monitoring and Reducing DTC Log File Disk I/O Contention - BizTalk Server, <a href="https://learn.microsoft.com/en-us/biztalk/technical-guides/monitoring-and-reducing-dtc-log-file-disk-i-o-contention">https://learn.microsoft.com/en-us/biztalk/technical-guides/monitoring-and-reducing-dtc-log-file-disk-i-o-contention</a></li>
+  <li>How does throughput impact database performance? - Milvus, <a href="https://milvus.io/ai-quick-reference/how-does-throughput-impact-database-performance">https://milvus.io/ai-quick-reference/how-does-throughput-impact-database-performance</a></li>
+  <li>Database Performance: Impact of Storage Limitations - Simplyblock, <a href="https://www.simplyblock.io/blog/database-performance-storage-limitations/">https://www.simplyblock.io/blog/database-performance-storage-limitations/</a></li>
+  <li>What Is Structured Logging and Why You Should Use It - Sematext, <a href="https://sematext.com/glossary/structured-logging/">https://sematext.com/glossary/structured-logging/</a></li>
+  <li>The Power of Structured Logging: Why It Matters in Modern Development - Atatus, <a href="https://www.atatus.com/blog/structured-logging-guide/">https://www.atatus.com/blog/structured-logging-guide/</a></li>
+  <li>5 Elk Stack Pros and Cons - ChaosSearch, <a href="https://www.chaossearch.io/blog/elk-stack-pros-and-cons">https://www.chaossearch.io/blog/elk-stack-pros-and-cons</a></li>
+  <li>Centralized Logging Systems – System Design , GeeksforGeeks, <a href="https://www.geeksforgeeks.org/centralized-logging-systems-system-design/">https://www.geeksforgeeks.org/centralized-logging-systems-system-design/</a></li>
+  <li>What Is Structured Logging and How to Use It - Loggly, <a href="https://www.loggly.com/use-cases/what-is-structured-logging-and-how-to-use-it/">https://www.loggly.com/use-cases/what-is-structured-logging-and-how-to-use-it/</a></li>
+  <li>Structured Logging Best Practices: Implementation Guide with Examples - Uptrace, <a href="https://uptrace.dev/glossary/structured-logging">https://uptrace.dev/glossary/structured-logging</a></li>
+  <li>Best 10 Audit Tools of 2025 - ComplianceQuest, <a href="https://www.compliancequest.com/audit-tools/">https://www.compliancequest.com/audit-tools/</a></li>
+  <li>6 Common Log File Formats , CrowdStrike, <a href="https://www.crowdstrike.com/en-us/cybersecurity-101/next-gen-siem/log-file-formats/">https://www.crowdstrike.com/en-us/cybersecurity-101/next-gen-siem/log-file-formats/</a></li>
+  <li>logging package - cloud.google.com/go/logging - Go Packages, <a href="https://pkg.go.dev/cloud.google.com/go/logging">https://pkg.go.dev/cloud.google.com/go/logging</a></li>
+  <li>Setting Up Cloud Logging for Go - Google Cloud, <a href="https://cloud.google.com/logging/docs/setup/go">https://cloud.google.com/logging/docs/setup/go</a></li>
+  <li>Logging to stderr and stdout golang Google Cloud Platform - Stack Overflow, <a href="https://stackoverflow.com/questions/57888588/logging-to-stderr-and-stdout-golang-google-cloud-platform">https://stackoverflow.com/questions/57888588/logging-to-stderr-and-stdout-golang-google-cloud-platform</a></li>
+  <li>Logging client libraries , Google Cloud, <a href="https://cloud.google.com/logging/docs/reference/libraries">https://cloud.google.com/logging/docs/reference/libraries</a></li>
+  <li>Cloud Logging documentation - Google Cloud, <a href="https://cloud.google.com/logging/docs">https://cloud.google.com/logging/docs</a></li>
+  <li>Cloud Logging overview , Google Cloud, <a href="https://cloud.google.com/logging/docs/overview">https://cloud.google.com/logging/docs/overview</a></li>
+  <li>Audit logging , Cloud Search - Google for Developers, <a href="https://developers.google.com/workspace/cloud-search/docs/guides/audit-logging-manual">https://developers.google.com/workspace/cloud-search/docs/guides/audit-logging-manual</a></li>
+  <li>Cloud Audit Logs overview - Google Cloud, <a href="https://cloud.google.com/logging/docs/audit">https://cloud.google.com/logging/docs/audit</a></li>
+  <li>Import logs from Cloud Storage to Cloud Logging , Cloud Architecture Center , Google Cloud, <a href="https://cloud.google.com/architecture/import-logs-from-storage-to-logging">https://cloud.google.com/architecture/import-logs-from-storage-to-logging</a></li>
+  <li>AWS services for logging and monitoring - AWS Prescriptive Guidance - AWS Documentation, <a href="https://docs.aws.amazon.com/prescriptive-guidance/latest/logging-monitoring-for-application-owners/aws-services-logging-monitoring.html">https://docs.aws.amazon.com/prescriptive-guidance/latest/logging-monitoring-for-application-owners/aws-services-logging-monitoring.html</a></li>
+  <li>Logging and monitoring in AWS Audit Manager, <a href="https://docs.aws.amazon.com/audit-manager/latest/userguide/security-logging-and-monitoring.html">https://docs.aws.amazon.com/audit-manager/latest/userguide/security-logging-and-monitoring.html</a></li>
+  <li>Architecture overview - Centralized Logging with OpenSearch - AWS Documentation, <a href="https://docs.aws.amazon.com/solutions/latest/centralized-logging-with-opensearch/architecture-overview.html">https://docs.aws.amazon.com/solutions/latest/centralized-logging-with-opensearch/architecture-overview.html</a></li>
+  <li>Document and centralize architecture diagrams - AWS Security Incident Response User Guide, <a href="https://docs.aws.amazon.com/security-ir/latest/userguide/document-and-centralize-architecture-diagrams.html">https://docs.aws.amazon.com/security-ir/latest/userguide/document-and-centralize-architecture-diagrams.html</a></li>
+  <li>List log entries - Google Cloud, <a href="https://cloud.google.com/logging/docs/samples/logging-list-log-entries">https://cloud.google.com/logging/docs/samples/logging-list-log-entries</a></li>
+</ol>
+
+        
+      </section>
+
+      <footer class="page__meta">
+        
+        
+  
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-tags" aria-hidden="true"></i> Tags: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/tags/#audit" class="page__taxonomy-item p-category" rel="tag">Audit</a><span class="sep">, </span>
+    
+      <a href="/tags/#aws" class="page__taxonomy-item p-category" rel="tag">AWS</a><span class="sep">, </span>
+    
+      <a href="/tags/#backend" class="page__taxonomy-item p-category" rel="tag">Backend</a><span class="sep">, </span>
+    
+      <a href="/tags/#cloudcomputing" class="page__taxonomy-item p-category" rel="tag">CloudComputing</a><span class="sep">, </span>
+    
+      <a href="/tags/#compliance" class="page__taxonomy-item p-category" rel="tag">Compliance</a><span class="sep">, </span>
+    
+      <a href="/tags/#dataarchitecture" class="page__taxonomy-item p-category" rel="tag">DataArchitecture</a><span class="sep">, </span>
+    
+      <a href="/tags/#devops" class="page__taxonomy-item p-category" rel="tag">DevOps</a><span class="sep">, </span>
+    
+      <a href="/tags/#gcp" class="page__taxonomy-item p-category" rel="tag">GCP</a><span class="sep">, </span>
+    
+      <a href="/tags/#golang" class="page__taxonomy-item p-category" rel="tag">GoLang</a><span class="sep">, </span>
+    
+      <a href="/tags/#logging" class="page__taxonomy-item p-category" rel="tag">Logging</a><span class="sep">, </span>
+    
+      <a href="/tags/#security" class="page__taxonomy-item p-category" rel="tag">Security</a>
+    
+    </span>
+  </p>
+
+
+
+
+        
+
+  <p class="page__date"><strong><i class="fas fa-fw fa-calendar-alt" aria-hidden="true"></i> Updated:</strong> <time class="dt-published" datetime="2025-06-03T00:00:00+03:00">June 3, 2025</time></p>
+
+      </footer>
+
+      <section class="page__share">
+  <h4 class="page__share-title">Share on</h4>
+
+  <a href="https://x.com/intent/tweet?text=%F0%9F%94%A5+Why+Audit+Logging+Doesn%27t+Belong+in+Your+Main+Database%20http%3A%2F%2Flocalhost%3A4000%2Faudit-log" class="btn btn--x" aria-label="Share on X" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on X">
+    <i class="fab fa-fw fa-x-twitter" aria-hidden="true"></i><span> X</span>
+  </a>
+
+  <a href="https://www.facebook.com/sharer/sharer.php?u=http%3A%2F%2Flocalhost%3A4000%2Faudit-log" class="btn btn--facebook" aria-label="Share on Facebook" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Facebook">
+    <i class="fab fa-fw fa-facebook" aria-hidden="true"></i><span> Facebook</span>
+  </a>
+
+  <a href="https://www.linkedin.com/shareArticle?mini=true&url=http://localhost:4000/audit-log" class="btn btn--linkedin" aria-label="Share on LinkedIn" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on LinkedIn">
+    <i class="fab fa-fw fa-linkedin" aria-hidden="true"></i><span> LinkedIn</span>
+  </a>
+
+  <a href="https://bsky.app/intent/compose?text=%F0%9F%94%A5+Why+Audit+Logging+Doesn%27t+Belong+in+Your+Main+Database%20http%3A%2F%2Flocalhost%3A4000%2Faudit-log" class="btn btn--bluesky" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Bluesky">
+    <i class="fab fa-fw fa-bluesky" aria-hidden="true"></i><span> Bluesky</span>
+  </a>
+</section>
+
+
+      
+  <nav class="pagination">
+    
+      <a href="/go-errors" class="pagination--pager" title="Go 1.20’s errors.Join and the Great Unwrap Mystery: A Developer’s Journey">Previous</a>
+    
+    
+      <a href="#" class="pagination--pager disabled">Next</a>
+    
+  </nav>
+
+
+    </div>
+
+    
+  </article>
+
+  
+  
+    
+<div class="page__related">
+  
+  <h2 class="page__related-title">You May Also Enjoy</h2>
+  <div class="grid__wrapper">
+    
+      
+      
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/error_join.jpg" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/go-errors" rel="permalink">Go 1.20’s <code class="language-plaintext highlighter-rouge">errors.Join</code> and the Great Unwrap Mystery: A Developer’s Journey
+</a>
+      
+    </h2>
+    
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2025-05-20T00:00:00+03:00">May 20, 2025</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          2 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt" itemprop="description">Understanding Go’s error handling evolution and the hidden power of joined errors
+</p>
+  </article>
+</div>
+
+    
+  </div>
+</div>
+
+  
+  
+</div>
+
+  
+</div>
+
+
+
+<div id="footer" class="page__footer">
+  <footer>
+    <!-- start custom footer snippets -->
+
+<!-- end custom footer snippets -->
+    <div class="page__footer-follow">
+  <ul class="social-icons">
+    
+
+    
+      
+        
+          <li><a href="https://www.linkedin.com/in/ehab-terra" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-linkedin" aria-hidden="true"></i> Linkedin</a></li>
+        
+      
+        
+      
+        
+          <li><a href="https://github.com/ehabterra" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-github" aria-hidden="true"></i> GitHub</a></li>
+        
+      
+        
+      
+        
+      
+        
+      
+    
+
+    
+      <li><a href="/feed.xml"><i class="fas fa-fw fa-rss-square" aria-hidden="true"></i> Feed</a></li>
+    
+  </ul>
+</div>
+
+<div class="page__footer-copyright">&copy; 2025 <a href="http://localhost:4000">Ehab's Website</a>. Powered by <a href="https://jekyllrb.com" rel="nofollow">Jekyll</a> &amp; <a href="https://mademistakes.com/work/jekyll-themes/minimal-mistakes/" rel="nofollow">Minimal Mistakes</a>.</div>
+
+  </footer>
+</div>
+
+
+  <script src="/assets/js/main.min.js"></script>
+
+
+
+
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-RXWM6BBFPQ"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-RXWM6BBFPQ');
+</script>
+
+
+
+
+</body>
+</html>

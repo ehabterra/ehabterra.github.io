@@ -1,12 +1,14 @@
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-RXWM6BBFPQ"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-RXWM6BBFPQ');
-</script>
+---
+layout: home
+author_profile: true
+key: blog
+title: "Ehab's Page"
+subtitle: Welcome to My Engineering Blog 👋
+date: 2025-06-03
+tags: [Audit, Logging, CloudComputing, GCP, AWS, GoLang, Backend, DevOps, Security, Compliance, DataArchitecture]
+author: Ehab Terra
+permalink: /
+---
 # Welcome to My Engineering Blog 👋
 
 ## 🧑‍💻 About Me
@@ -17,17 +19,6 @@ I'm a **Gopher (Go enthusiast)** and systems architect who loves:
 - ✍️ Sharing **practical engineering insights**
 
 > *"The most elegant code is the one you don't have to write twice."*
-
-## 📚 Featured Articles
-
-### 🧩 Go Deep Dives
-[**Go 1.20's `errors.Join` and the Great Unwrap Mystery**](posts/Go1.20_Errors_Join_Blog.md)  
-*Understanding Go's error handling evolution and the hidden power of joined errors*
-
-### ☁️ Cloud Architecture
-[**Why Audit Logging Doesn't Belong in Your Main Database**](posts/audit_log.md)  
-*How to implement scalable audit trails without compromising database performance*
-
 
 ## 📬 Get In Touch
 - [💼 LinkedIn](https://www.linkedin.com/in/ehab-terra)

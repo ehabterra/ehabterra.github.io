@@ -1,0 +1,17 @@
+<script src="https://cdn.jsdelivr.net/npm/mermaid@{{ site.mermaid.version | default: '11.6.0' }}/dist/mermaid.min.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Fix for Rouge highlighter conflict
+    document.querySelectorAll('code.language-mermaid').forEach((el) => {
+      el.classList.remove('language-mermaid');
+      el.classList.add('mermaid');
+      el.parentElement.classList.add('mermaid-container');
+    });
+
+    mermaid.initialize({
+      theme: '{{ site.mermaid.theme | default: "default" }}',
+      startOnLoad: true,
+      fontFamily: 'Arial'
+    });
+  });
+</script>

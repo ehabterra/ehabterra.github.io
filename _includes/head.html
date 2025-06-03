@@ -1,0 +1,11 @@
+{% if page.mermaid %}
+{% include mermaid.html %}
+{% endif %}
+
+<!-- Minimal Mistakes assets -->
+<link rel="stylesheet" href="{{ '/assets/css/main.css' | relative_url }}">
+<!-- For documents/pages whose URLs can change... -->
+<title>{{ page.title }}</title>
+{% include analytics.html %}
+{% seo %}
+{% feed_meta %}

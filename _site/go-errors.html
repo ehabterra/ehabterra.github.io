@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html>
+<head>
+  
+
+<!-- Minimal Mistakes assets -->
+<link rel="stylesheet" href="/assets/css/main.css">
+<!-- For documents/pages whose URLs can change... -->
+<title>Go 1.20’s `errors.Join` and the Great Unwrap Mystery: A Developer’s Journey</title>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-RXWM6BBFPQ"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-RXWM6BBFPQ');
+</script>
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Go 1.20’s errors.Join and the Great Unwrap Mystery: A Developer’s Journey | Ehab’s Website</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Go 1.20’s errors.Join and the Great Unwrap Mystery: A Developer’s Journey" />
+<meta name="author" content="Ehab Terra" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Understanding Go’s error handling evolution and the hidden power of joined errors" />
+<meta property="og:description" content="Understanding Go’s error handling evolution and the hidden power of joined errors" />
+<link rel="canonical" href="http://localhost:4000/go-errors" />
+<meta property="og:url" content="http://localhost:4000/go-errors" />
+<meta property="og:site_name" content="Ehab’s Website" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2025-05-20T00:00:00+03:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Go 1.20’s errors.Join and the Great Unwrap Mystery: A Developer’s Journey" />
+<meta name="twitter:site" content="@" />
+<meta name="twitter:creator" content="@Ehab Terra" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Ehab Terra"},"dateModified":"2025-05-20T00:00:00+03:00","datePublished":"2025-05-20T00:00:00+03:00","description":"Understanding Go’s error handling evolution and the hidden power of joined errors","headline":"Go 1.20’s errors.Join and the Great Unwrap Mystery: A Developer’s Journey","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/go-errors"},"url":"http://localhost:4000/go-errors"}</script>
+<!-- End Jekyll SEO tag -->
+
+<link type="application/atom+xml" rel="alternate" href="http://localhost:4000/feed.xml" title="Ehab&apos;s Website" />
+
+</head>
+<body class="layout--single" dir="ltr">
+<nav class="skip-links">
+  <ul>
+    <li><a href="#site-nav" class="screen-reader-shortcut">Skip to primary navigation</a></li>
+    <li><a href="#main" class="screen-reader-shortcut">Skip to content</a></li>
+    <li><a href="#footer" class="screen-reader-shortcut">Skip to footer</a></li>
+  </ul>
+</nav>
+
+
+
+<div class="masthead">
+  <div class="masthead__inner-wrap">
+    <div class="masthead__menu">
+      <nav id="site-nav" class="greedy-nav">
+        
+        <a class="site-title" href="/">
+          Ehab's Website
+          
+        </a>
+        <ul class="visible-links"><li class="masthead__menu-item">
+              <a
+                href="/"
+                
+                
+              >Home</a>
+            </li><li class="masthead__menu-item">
+              <a
+                href="/year-archive/"
+                
+                
+              >Posts</a>
+            </li><li class="masthead__menu-item">
+              <a
+                href="/categories/"
+                
+                
+              >Categories</a>
+            </li><li class="masthead__menu-item">
+              <a
+                href="/tags/"
+                
+                
+              >Tags</a>
+            </li><li class="masthead__menu-item">
+              <a
+                href="/page-archive/"
+                
+                
+              >Pages</a>
+            </li><li class="masthead__menu-item">
+              <a
+                href="/collection-archive/"
+                
+                
+              >Collections</a>
+            </li></ul>
+        
+        <button class="greedy-nav__toggle hidden" type="button">
+          <span class="visually-hidden">Toggle menu</span>
+          <div class="navicon"></div>
+        </button>
+        <ul class="hidden-links hidden"></ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+
+<div class="initial-content">
+  
+  
+
+
+
+
+
+
+
+<div class="page__hero"
+  style=" background-image: url('');"
+>
+  
+    <img src="/assets/images/error_join.jpg" alt="Go 1.20’s errors.Join and the Great Unwrap Mystery: A Developer’s Journey" class="page__hero-image">
+  
+  
+</div>
+
+
+
+
+
+
+  
+    
+
+
+
+<nav class="breadcrumbs">
+  <ol itemscope itemtype="https://schema.org/BreadcrumbList">
+    
+    
+    
+      
+        <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+          <a href="/" itemprop="item"><span itemprop="name">Home</span></a>
+
+          <meta itemprop="position" content="1" />
+        </li>
+        <span class="sep">/</span>
+      
+      
+        <li class="current">Go 1.20’s `errors.Join` and the Great Unwrap Mystery: A Developer’s Journey</li>
+      
+    
+  </ol>
+</nav>
+
+  
+
+
+<div id="main" role="main">
+  
+  <div class="sidebar sticky">
+  
+
+
+<div itemscope itemtype="https://schema.org/Person" class="h-card">
+
+  
+
+  <div class="author__content">
+    <h3 class="author__name p-name" itemprop="name">
+      <a class="u-url" rel="me" href="http://localhost:4000/" itemprop="url"></a>
+    </h3>
+    
+  </div>
+
+  <div class="author__urls-wrapper">
+    <button class="btn btn--inverse">Follow</button>
+    <ul class="author__urls social-icons">
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <!--
+  <li>
+    <a href="http://link-to-whatever-social-network.com/user/" itemprop="sameAs" rel="nofollow noopener noreferrer me">
+      <i class="fas fa-fw" aria-hidden="true"></i> Custom Social Profile Link
+    </a>
+  </li>
+-->
+    </ul>
+  </div>
+</div>
+
+  
+  </div>
+
+
+
+  <article class="page" itemscope itemtype="https://schema.org/CreativeWork">
+    <meta itemprop="headline" content="Go 1.20’s errors.Join and the Great Unwrap Mystery: A Developer’s Journey">
+    <meta itemprop="description" content="Understanding Go’s error handling evolution and the hidden power of joined errors">
+    <meta itemprop="datePublished" content="2025-05-20T00:00:00+03:00">
+    
+
+    <div class="page__inner-wrap">
+      
+        <header>
+          <h1 id="page-title" class="page__title" itemprop="headline">
+            <a href="http://localhost:4000/go-errors" itemprop="url">Go 1.20’s <code class="language-plaintext highlighter-rouge">errors.Join</code> and the Great Unwrap Mystery: A Developer’s Journey
+</a>
+          </h1>
+          
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2025-05-20T00:00:00+03:00">May 20, 2025</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-clock" aria-hidden="true"></i>
+        
+          2 minute read
+        
+      </span>
+    
+  </p>
+
+
+        </header>
+      
+
+      <section class="page__content" itemprop="text">
+        
+          <aside class="sidebar__right ">
+            <nav class="toc">
+              <header><h4 class="nav__title"><i class="fas fa-file-alt"></i> On this page</h4></header>
+              <ul class="toc__menu"><li><a href="#introduction">Introduction</a></li><li><a href="#the-three-faces-of-go-errors">The Three Faces of Go Errors</a><ul><li><a href="#why-the-complexity">Why the Complexity?</a></li></ul></li><li><a href="#fmterrorfs-hidden-surprise-multiple-w-verbs-new">fmt.Errorf’s Hidden Surprise: Multiple %w Verbs (NEW)</a><ul><li><a href="#key-insight">Key Insight:</a></li></ul></li><li><a href="#why-unwrap-ignores-slices">Why Unwrap Ignores Slices</a><ul><li><a href="#the-go-teams-rationale">The Go Team’s Rationale:</a></li></ul></li><li><a href="#the-community-backlash-proposal-66455-new">The Community Backlash: Proposal #66455 (NEW)</a><ul><li><a href="#why-the-proposal-was-declined">Why the Proposal Was Declined:</a></li><li><a href="#my-take">My Take:</a></li></ul></li><li><a href="#lessons-from-the-go-2-proposal">Lessons from the Go 2 Proposal</a></li><li><a href="#best-practices-for-2025">Best Practices for 2025</a><ul><li><a href="#use-errorsjoin-for">Use errors.Join For:</a></li><li><a href="#use-fmterrorf-for">Use fmt.Errorf For:</a></li><li><a href="#always-test-unwrap-behavior">Always Test Unwrap Behavior:</a></li></ul></li><li><a href="#conclusion-embrace-the-chaos">Conclusion: Embrace the Chaos</a><ul><li><a href="#join-the-discussion">Join the Discussion:</a></li></ul></li><li><a href="#resources">Resources</a></li></ul>
+            </nav>
+          </aside>
+        
+        <p>Understanding Go’s error handling evolution and the hidden power of joined errors</p>
+
+<h2 id="introduction">Introduction</h2>
+
+<p>As a Go developer, I once thought <code class="language-plaintext highlighter-rouge">errors.Join</code> would simplify my error handling—until I discovered it silently breaks <code class="language-plaintext highlighter-rouge">errors.Unwrap</code>. Let me walk you through this rabbit hole, complete with source code spelunking and a community debate that’s still simmering.</p>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">err1</span> <span class="o">:=</span> <span class="n">errors</span><span class="o">.</span><span class="n">New</span><span class="p">(</span><span class="s">"error 1"</span><span class="p">)</span>
+<span class="n">err2</span> <span class="o">:=</span> <span class="n">errors</span><span class="o">.</span><span class="n">New</span><span class="p">(</span><span class="s">"error 2"</span><span class="p">)</span>
+<span class="n">joined</span> <span class="o">:=</span> <span class="n">errors</span><span class="o">.</span><span class="n">Join</span><span class="p">(</span><span class="n">err1</span><span class="p">,</span> <span class="n">err2</span><span class="p">)</span>
+
+<span class="c">// Wait, why is this nil?!</span>
+<span class="n">fmt</span><span class="o">.</span><span class="n">Println</span><span class="p">(</span><span class="n">errors</span><span class="o">.</span><span class="n">Unwrap</span><span class="p">(</span><span class="n">joined</span><span class="p">))</span> <span class="c">// nil</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="the-three-faces-of-go-errors">The Three Faces of Go Errors</h2>
+
+<p>Go 1.20 introduced three error types that left me baffled:</p>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">// 1. For errors.Join(...)</span>
+<span class="k">type</span> <span class="n">joinError</span> <span class="k">struct</span> <span class="p">{</span> <span class="n">errs</span> <span class="p">[]</span><span class="kt">error</span> <span class="p">}</span>
+
+<span class="c">// 2. For fmt.Errorf with multiple %w verbs (NEW)</span>
+<span class="k">type</span> <span class="n">wrapErrors</span> <span class="k">struct</span> <span class="p">{</span> <span class="n">msg</span> <span class="kt">string</span><span class="p">;</span> <span class="n">errs</span> <span class="p">[]</span><span class="kt">error</span> <span class="p">}</span>
+
+<span class="c">// 3. Traditional fmt.Errorf("%w", err)</span>
+<span class="k">type</span> <span class="n">wrapError</span> <span class="k">struct</span> <span class="p">{</span> <span class="n">msg</span> <span class="kt">string</span><span class="p">;</span> <span class="n">err</span> <span class="kt">error</span> <span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="why-the-complexity">Why the Complexity?</h3>
+<p>Russ Cox explains in the Go 2 error handling proposal:</p>
+
+<blockquote>
+  <p>“We made a conscious choice to use explicit error results and explicit error checks to avoid the pitfalls of implicit exception handling.”</p>
+</blockquote>
+
+<p>But explicit doesn’t always mean simple. Let’s dissect the chaos.</p>
+
+<hr />
+
+<h2 id="fmterrorfs-hidden-surprise-multiple-w-verbs-new"><code class="language-plaintext highlighter-rouge">fmt.Errorf</code>’s Hidden Surprise: Multiple %w Verbs (NEW)</h2>
+
+<p>You might think <code class="language-plaintext highlighter-rouge">fmt.Errorf</code> with multiple <code class="language-plaintext highlighter-rouge">%w</code> works like <code class="language-plaintext highlighter-rouge">errors.Join</code>:</p>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">wrapped</span> <span class="o">:=</span> <span class="n">fmt</span><span class="o">.</span><span class="n">Errorf</span><span class="p">(</span><span class="s">"wrapper: %w, %w"</span><span class="p">,</span> <span class="n">err1</span><span class="p">,</span> <span class="n">err2</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>But under the hood, this creates a <code class="language-plaintext highlighter-rouge">wrapErrors</code> struct (not <code class="language-plaintext highlighter-rouge">joinError</code>). While it preserves error order, <code class="language-plaintext highlighter-rouge">errors.Unwrap</code> still fails:</p>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">fmt</span><span class="o">.</span><span class="n">Println</span><span class="p">(</span><span class="n">errors</span><span class="o">.</span><span class="n">Unwrap</span><span class="p">(</span><span class="n">wrapped</span><span class="p">))</span> <span class="c">// nil (same as errors.Join!)</span>
+</code></pre></div></div>
+
+<h3 id="key-insight">Key Insight:</h3>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">errors.Join</code>: Flattens errors into a slice.</li>
+  <li><code class="language-plaintext highlighter-rouge">fmt.Errorf("%w, %w")</code>: Preserves hierarchy but still breaks <code class="language-plaintext highlighter-rouge">Unwrap</code>.</li>
+</ul>
+
+<hr />
+
+<h2 id="why-unwrap-ignores-slices">Why <code class="language-plaintext highlighter-rouge">Unwrap</code> Ignores Slices</h2>
+
+<p>The <code class="language-plaintext highlighter-rouge">errors.Unwrap</code> function only handles single errors:</p>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">// go/src/errors/wrap.go (Go 1.20+)</span>
+<span class="c">// Source: https://cs.opensource.google/go/go/+/refs/tags/go1.20:src/errors/wrap.go</span>
+<span class="k">func</span> <span class="n">Unwrap</span><span class="p">(</span><span class="n">err</span> <span class="kt">error</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+    <span class="n">u</span><span class="p">,</span> <span class="n">ok</span> <span class="o">:=</span> <span class="n">err</span><span class="o">.</span><span class="p">(</span><span class="k">interface</span><span class="p">{</span> <span class="n">Unwrap</span><span class="p">()</span> <span class="kt">error</span> <span class="p">})</span>  <span class="c">// ❌ No slice support!</span>
+    <span class="k">if</span> <span class="o">!</span><span class="n">ok</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="no">nil</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="n">u</span><span class="o">.</span><span class="n">Unwrap</span><span class="p">()</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="the-go-teams-rationale">The Go Team’s Rationale:</h3>
+
+<ol>
+  <li><strong>Backward Compatibility</strong>: Existing code relies on <code class="language-plaintext highlighter-rouge">Unwrap</code> for single-error chains.</li>
+  <li><strong>Explicit Design</strong>: Forces developers to handle multi-errors intentionally.</li>
+</ol>
+
+<hr />
+
+<h2 id="the-community-backlash-proposal-66455-new">The Community Backlash: Proposal #66455 (NEW)</h2>
+
+<p>Developers protested this behavior in <a href="https://github.com/golang/go/issues/66455">GitHub #66455</a>, arguing:</p>
+
+<blockquote>
+  <p>“Unwrap should support slices to simplify error traversal.”</p>
+</blockquote>
+
+<h3 id="why-the-proposal-was-declined">Why the Proposal Was Declined:</h3>
+
+<ul>
+  <li>Lack of evidence for widespread issues.</li>
+  <li>Concerns about complicating the error interface.</li>
+</ul>
+
+<h3 id="my-take">My Take:</h3>
+
+<p>While the Go team prioritizes stability, this leaves developers writing boilerplate like:</p>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">func</span> <span class="n">UnwrapAll</span><span class="p">(</span><span class="n">err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">[]</span><span class="kt">error</span> <span class="p">{</span>
+    <span class="k">switch</span> <span class="n">e</span> <span class="o">:=</span> <span class="n">err</span><span class="o">.</span><span class="p">(</span><span class="k">type</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">case</span> <span class="k">interface</span><span class="p">{</span> <span class="n">Unwrap</span><span class="p">()</span> <span class="p">[]</span><span class="kt">error</span> <span class="p">}</span><span class="o">:</span> <span class="c">// joinError/wrapErrors</span>
+        <span class="k">return</span> <span class="n">e</span><span class="o">.</span><span class="n">Unwrap</span><span class="p">()</span>
+    <span class="k">case</span> <span class="k">interface</span><span class="p">{</span> <span class="n">Unwrap</span><span class="p">()</span> <span class="kt">error</span> <span class="p">}</span><span class="o">:</span>   <span class="c">// Traditional wrapError</span>
+        <span class="k">return</span> <span class="p">[]</span><span class="kt">error</span><span class="p">{</span><span class="n">e</span><span class="o">.</span><span class="n">Unwrap</span><span class="p">()}</span>
+    <span class="k">default</span><span class="o">:</span>
+        <span class="k">return</span> <span class="no">nil</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="lessons-from-the-go-2-proposal">Lessons from the Go 2 Proposal</h2>
+
+<p>Russ Cox’s vision for Go 2 error handling clarifies why we’re here:</p>
+
+<ol>
+  <li><strong>Explicit &gt; Implicit</strong>: Avoid “invisible” error checks like exceptions.</li>
+  <li><strong>Toolability First</strong>: Errors must work with static analysis and debugging tools.</li>
+  <li><strong>Wrapping Without Breaking</strong>: The <code class="language-plaintext highlighter-rouge">errors.Wrapper</code> interface aims to standardize error chains.</li>
+</ol>
+
+<p>Yet, as Cox admits:</p>
+
+<blockquote>
+  <p>“Existing code must keep working. Any changes must interoperate.”</p>
+</blockquote>
+
+<p>This explains why <code class="language-plaintext highlighter-rouge">Unwrap</code> remains restrictive—backward compatibility trumps convenience.</p>
+
+<hr />
+
+<h2 id="best-practices-for-2025">Best Practices for 2025</h2>
+
+<h3 id="use-errorsjoin-for">Use <code class="language-plaintext highlighter-rouge">errors.Join</code> For:</h3>
+<ul>
+  <li>Flat error aggregation (e.g., batch processing).</li>
+  <li>Cases where error hierarchy doesn’t matter.</li>
+</ul>
+
+<h3 id="use-fmterrorf-for">Use <code class="language-plaintext highlighter-rouge">fmt.Errorf</code> For:</h3>
+<ul>
+  <li>Ordered error wrapping (e.g., contextual chains).</li>
+  <li>Compatibility with <code class="language-plaintext highlighter-rouge">errors.Is</code>/<code class="language-plaintext highlighter-rouge">errors.As</code>.</li>
+</ul>
+
+<h3 id="always-test-unwrap-behavior">Always Test <code class="language-plaintext highlighter-rouge">Unwrap</code> Behavior:</h3>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">func</span> <span class="n">TestJoinUnwrap</span><span class="p">(</span><span class="n">t</span> <span class="o">*</span><span class="n">testing</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">joined</span> <span class="o">:=</span> <span class="n">errors</span><span class="o">.</span><span class="n">Join</span><span class="p">(</span><span class="n">errors</span><span class="o">.</span><span class="n">New</span><span class="p">(</span><span class="s">"err1"</span><span class="p">),</span> <span class="n">errors</span><span class="o">.</span><span class="n">New</span><span class="p">(</span><span class="s">"err2"</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">errors</span><span class="o">.</span><span class="n">Unwrap</span><span class="p">(</span><span class="n">joined</span><span class="p">)</span> <span class="o">!=</span> <span class="no">nil</span> <span class="p">{</span>
+        <span class="n">t</span><span class="o">.</span><span class="n">Fatal</span><span class="p">(</span><span class="s">"Unwrap should return nil for joinError!"</span><span class="p">)</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="conclusion-embrace-the-chaos">Conclusion: Embrace the Chaos</h2>
+
+<p>Go’s error handling is a trade-off:</p>
+
+<ul>
+  <li><strong>Pros</strong>: Explicitness, toolability, and no hidden control flow.</li>
+  <li><strong>Cons</strong>: Boilerplate and confusing edge cases.</li>
+</ul>
+
+<h3 id="join-the-discussion">Join the Discussion:</h3>
+
+<ul>
+  <li>How do you handle multi-errors?</li>
+  <li>Should <code class="language-plaintext highlighter-rouge">Unwrap</code> support slices? Vote in the comments!</li>
+</ul>
+
+<hr />
+
+<h2 id="resources">Resources</h2>
+
+<ul>
+  <li><a href="https://go.dev/blog/go1.13-errors">Error Handling in Go 1.13</a></li>
+  <li><a href="https://go.dev/blog/error-handling-and-go">Error Handling and Go</a></li>
+  <li><a href="https://dev.to/fredgitonga/errors-are-values-a-guide-to-error-handling-in-go-3ohi">Errors Are Values: A Guide to Error Handling in Go</a></li>
+</ul>
+
+        
+      </section>
+
+      <footer class="page__meta">
+        
+        
+  
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-tags" aria-hidden="true"></i> Tags: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/tags/#golang" class="page__taxonomy-item p-category" rel="tag">GoLang</a>
+    
+    </span>
+  </p>
+
+
+
+
+        
+
+  <p class="page__date"><strong><i class="fas fa-fw fa-calendar-alt" aria-hidden="true"></i> Updated:</strong> <time class="dt-published" datetime="2025-05-20T00:00:00+03:00">May 20, 2025</time></p>
+
+      </footer>
+
+      <section class="page__share">
+  <h4 class="page__share-title">Share on</h4>
+
+  <a href="https://x.com/intent/tweet?text=Go+1.20%E2%80%99s+%60errors.Join%60+and+the+Great+Unwrap+Mystery%3A+A+Developer%E2%80%99s+Journey%20http%3A%2F%2Flocalhost%3A4000%2Fgo-errors" class="btn btn--x" aria-label="Share on X" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on X">
+    <i class="fab fa-fw fa-x-twitter" aria-hidden="true"></i><span> X</span>
+  </a>
+
+  <a href="https://www.facebook.com/sharer/sharer.php?u=http%3A%2F%2Flocalhost%3A4000%2Fgo-errors" class="btn btn--facebook" aria-label="Share on Facebook" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Facebook">
+    <i class="fab fa-fw fa-facebook" aria-hidden="true"></i><span> Facebook</span>
+  </a>
+
+  <a href="https://www.linkedin.com/shareArticle?mini=true&url=http://localhost:4000/go-errors" class="btn btn--linkedin" aria-label="Share on LinkedIn" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on LinkedIn">
+    <i class="fab fa-fw fa-linkedin" aria-hidden="true"></i><span> LinkedIn</span>
+  </a>
+
+  <a href="https://bsky.app/intent/compose?text=Go+1.20%E2%80%99s+%60errors.Join%60+and+the+Great+Unwrap+Mystery%3A+A+Developer%E2%80%99s+Journey%20http%3A%2F%2Flocalhost%3A4000%2Fgo-errors" class="btn btn--bluesky" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Bluesky">
+    <i class="fab fa-fw fa-bluesky" aria-hidden="true"></i><span> Bluesky</span>
+  </a>
+</section>
+
+
+      
+  <nav class="pagination">
+    
+      <a href="#" class="pagination--pager disabled">Previous</a>
+    
+    
+      <a href="/audit-log" class="pagination--pager" title="🔥 Why Audit Logging Doesn’t Belong in Your Main Database">Next</a>
+    
+  </nav>
+
+
+    </div>
+
+    
+  </article>
+
+  
+  
+    
+<div class="page__related">
+  
+  <h2 class="page__related-title">You May Also Enjoy</h2>
+  <div class="grid__wrapper">
+    
+      
+      
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/audit_log.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/audit-log" rel="permalink">🔥 Why Audit Logging Doesn’t Belong in Your Main Database
+</a>
+      
+    </h2>
+    
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2025-06-03T00:00:00+03:00">June 3, 2025</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          6 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt" itemprop="description">How to implement scalable audit trails without compromising database performance
+</p>
+  </article>
+</div>
+
+    
+  </div>
+</div>
+
+  
+  
+</div>
+
+  
+</div>
+
+
+
+<div id="footer" class="page__footer">
+  <footer>
+    <!-- start custom footer snippets -->
+
+<!-- end custom footer snippets -->
+    <div class="page__footer-follow">
+  <ul class="social-icons">
+    
+
+    
+      
+        
+          <li><a href="https://www.linkedin.com/in/ehab-terra" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-linkedin" aria-hidden="true"></i> Linkedin</a></li>
+        
+      
+        
+      
+        
+          <li><a href="https://github.com/ehabterra" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-github" aria-hidden="true"></i> GitHub</a></li>
+        
+      
+        
+      
+        
+      
+        
+      
+    
+
+    
+      <li><a href="/feed.xml"><i class="fas fa-fw fa-rss-square" aria-hidden="true"></i> Feed</a></li>
+    
+  </ul>
+</div>
+
+<div class="page__footer-copyright">&copy; 2025 <a href="http://localhost:4000">Ehab's Website</a>. Powered by <a href="https://jekyllrb.com" rel="nofollow">Jekyll</a> &amp; <a href="https://mademistakes.com/work/jekyll-themes/minimal-mistakes/" rel="nofollow">Minimal Mistakes</a>.</div>
+
+  </footer>
+</div>
+
+
+  <script src="/assets/js/main.min.js"></script>
+
+
+
+
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-RXWM6BBFPQ"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-RXWM6BBFPQ');
+</script>
+
+
+
+
+</body>
+</html>
