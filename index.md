@@ -21,11 +21,11 @@ I'm a **Gopher (Go enthusiast)** and systems architect who loves:
 ## 📚 Featured Articles
 
 ### 🧩 Go Deep Dives
-[**Go 1.20's `errors.Join` and the Great Unwrap Mystery**](Go1.20_Errors_Join_Blog.md)  
+[**Go 1.20's `errors.Join` and the Great Unwrap Mystery**](posts/Go1.20_Errors_Join_Blog.md)  
 *Understanding Go's error handling evolution and the hidden power of joined errors*
 
 ### ☁️ Cloud Architecture
-[**Why Audit Logging Doesn't Belong in Your Main Database**](audit_log.md)  
+[**Why Audit Logging Doesn't Belong in Your Main Database**](posts/audit_log.md)  
 *How to implement scalable audit trails without compromising database performance*
 
 
