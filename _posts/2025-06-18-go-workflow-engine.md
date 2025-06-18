@@ -1,8 +1,8 @@
 ---
 key: blog
 title: "🚀 Building a Petri Net-Based Workflow Engine in Go: From Theory to Production"
-date: 2025-01-08
-last_modified_at: 2025-01-08
+date: 2025-06-18
+last_modified_at: 2025-06-18
 tags: [GoLang, Backend, DevOps, Workflow, StateMachine, PetriNet, Architecture, OpenSource]
 mermaid: true
 header:
