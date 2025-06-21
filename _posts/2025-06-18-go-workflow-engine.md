@@ -2,7 +2,7 @@
 key: blog
 title: "🚀 Building a Petri Net-Based Workflow Engine in Go: From Theory to Production"
 date: 2025-06-18
-last_modified_at: 2025-06-18
+last_modified_at: 2025-06-21
 tags: [GoLang, Backend, DevOps, Workflow, StateMachine, PetriNet, Architecture, OpenSource]
 mermaid: true
 header:
@@ -120,12 +120,12 @@ The event system allows for powerful workflow hooks:
 ```go
 // Add event listeners
 wf.AddEventListener(workflow.EventBeforeTransition, func(event workflow.Event) error {
-    log.Printf("Before transition: %s", event.Transition())
+    log.Printf("Before transition: %s", event.Transition().Name())
     return nil
 })
 
 wf.AddEventListener(workflow.EventAfterTransition, func(event workflow.Event) error {
-    log.Printf("After transition: %s", event.Transition())
+    log.Printf("After transition: %s", event.Transition().Name())
     return nil
 })
 ```
@@ -164,86 +164,89 @@ Let's build a complete order processing workflow:
 package main
 
 import (
-    "fmt"
-    "log"
-    "github.com/ehabterra/workflow"
+	"fmt"
+	"log"
+
+	"github.com/ehabterra/workflow"
 )
 
 func main() {
-    // Define order places
-    places := []workflow.Place{
-        "pending",
-        "payment_processing", 
-        "payment_approved",
-        "payment_failed",
-        "inventory_check",
-        "shipping",
-        "delivered",
-        "cancelled",
-    }
+	// Define order places
+	places := []workflow.Place{
+		"pending",
+		"payment_processing",
+		"payment_approved",
+		"payment_failed",
+		"inventory_check",
+		"shipping",
+		"delivered",
+		"cancelled",
+	}
 
-    // Define transitions
-    transitions := []workflow.Transition{
-        createTransition("process_payment", []workflow.Place{"pending"}, []workflow.Place{"payment_processing"}),
-        createTransition("payment_success", []workflow.Place{"payment_processing"}, []workflow.Place{"payment_approved"}),
-        createTransition("payment_failure", []workflow.Place{"payment_processing"}, []workflow.Place{"payment_failed"}),
-        createTransition("check_inventory", []workflow.Place{"payment_approved"}, []workflow.Place{"inventory_check"}),
-        createTransition("start_shipping", []workflow.Place{"inventory_check"}, []workflow.Place{"shipping"}),
-        createTransition("mark_delivered", []workflow.Place{"shipping"}, []workflow.Place{"delivered"}),
-        createTransition("cancel_order", []workflow.Place{"pending", "payment_processing", "payment_approved"}, []workflow.Place{"cancelled"}),
-    }
+	// Define transitions
+	transitions := []workflow.Transition{
+		createTransition("process_payment", []workflow.Place{"pending"}, []workflow.Place{"payment_processing"}),
+		createTransition("payment_success", []workflow.Place{"payment_processing"}, []workflow.Place{"payment_approved"}),
+		createTransition("payment_failure", []workflow.Place{"payment_processing"}, []workflow.Place{"payment_failed"}),
+		createTransition("check_inventory", []workflow.Place{"payment_approved"}, []workflow.Place{"inventory_check"}),
+		createTransition("start_shipping", []workflow.Place{"inventory_check"}, []workflow.Place{"shipping"}),
+		createTransition("mark_delivered", []workflow.Place{"shipping"}, []workflow.Place{"delivered"}),
+		createTransition("cancel_pending", []workflow.Place{"pending"}, []workflow.Place{"cancelled"}),
+		createTransition("cancel_payment_processing", []workflow.Place{"payment_processing"}, []workflow.Place{"cancelled"}),
+		createTransition("cancel_payment_approved", []workflow.Place{"payment_approved"}, []workflow.Place{"cancelled"}),
+	}
 
-    // Create workflow definition
-    definition, err := workflow.NewDefinition(places, transitions)
-    if err != nil {
-        log.Fatal(err)
-    }
+	// Create workflow definition
+	definition, err := workflow.NewDefinition(places, transitions)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-    // Create workflow instance
-    wf, err := workflow.NewWorkflow("order-123", definition, "pending")
-    if err != nil {
-        log.Fatal(err)
-    }
+	// Create workflow instance
+	wf, err := workflow.NewWorkflow("order-123", definition, "pending")
+	if err != nil {
+		log.Fatal(err)
+	}
 
-    // Add order context
-    wf.SetContext("order_amount", 150.0)
-    wf.SetContext("customer_id", "cust-456")
+	// Add order context
+	wf.SetContext("order_amount", 150.0)
+	wf.SetContext("customer_id", "cust-456")
 
-    // Add event listeners for business logic
-    wf.AddEventListener(workflow.EventBeforeTransition, func(event workflow.Event) error {
-        log.Printf("Processing transition: %s", event.Transition())
-        return nil
-    })
+	// Add event listeners for business logic
+	wf.AddEventListener(workflow.EventBeforeTransition, func(event workflow.Event) error {
+		log.Printf("Processing transition: %s", event.Transition().Name())
+		return nil
+	})
 
-    wf.AddEventListener(workflow.EventAfterTransition, func(event workflow.Event) error {
-        log.Printf("Completed transition: %s", event.Transition())
-        return nil
-    })
+	wf.AddEventListener(workflow.EventAfterTransition, func(event workflow.Event) error {
+		log.Printf("Completed transition: %s", event.Transition().Name())
+		return nil
+	})
 
-    // Process the order
-    if err := wf.Apply([]workflow.Place{"payment_processing"}); err != nil {
-        log.Fatal(err)
-    }
+	// Process the order
+	if err := wf.Apply([]workflow.Place{"payment_processing"}); err != nil {
+		log.Fatal(err)
+	}
 
-    if err := wf.Apply([]workflow.Place{"payment_approved"}); err != nil {
-        log.Fatal(err)
-    }
+	if err := wf.Apply([]workflow.Place{"payment_approved"}); err != nil {
+		log.Fatal(err)
+	}
 
-    // Get current places
-    currentPlaces := wf.CurrentPlaces()
-    fmt.Printf("Current places: %v\n", currentPlaces)
+	// Get current places
+	currentPlaces := wf.CurrentPlaces()
+	fmt.Printf("Current places: %v\n", currentPlaces)
 
-    // Generate workflow diagram
-    diagram := wf.GenerateMermaidDiagram()
-    fmt.Println(diagram)
+	// Generate workflow diagram
+	diagram := wf.GenerateMermaidDiagram()
+	fmt.Println(diagram)
 }
 
 func createTransition(name string, from, to []workflow.Place) workflow.Transition {
-    tr, err := workflow.NewTransition(name, from, to)
-    if err != nil {
-        log.Fatal(err)
-    }
-    return *tr
+	tr, err := workflow.NewTransition(name, from, to)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return *tr
 }
 ```
 
@@ -268,11 +271,9 @@ stateDiagram-v2
     payment_approved --> inventory_check : check_inventory
     inventory_check --> shipping : start_shipping
     shipping --> delivered : mark_delivered
-    state cancel_order_join <<join>>
-    pending --> cancel_order_join : cancel_order
-    payment_processing --> cancel_order_join : cancel_order
-    payment_approved --> cancel_order_join : cancel_order
-    cancel_order_join --> cancelled
+    pending --> cancelled : cancel_pending
+    payment_processing --> cancelled : cancel_payment_processing
+    payment_approved --> cancelled : cancel_payment_approved
 
     %% Current places
     class payment_approved currentPlace
@@ -522,7 +523,7 @@ if err := manager.SaveWorkflow("my-workflow", wf); err != nil {
 ```go
 // Store listener reference for removal
 listener := func(event workflow.Event) error {
-    log.Printf("Transition: %s", event.Transition())
+    log.Printf("Transition: %s", event.Transition().Name())
     return nil
 }
 
