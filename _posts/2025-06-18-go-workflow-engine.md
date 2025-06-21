@@ -236,8 +236,8 @@ func main() {
 	currentPlaces := wf.CurrentPlaces()
 	fmt.Printf("Current places: %v\n", currentPlaces)
 
-	// Generate workflow diagram
-	diagram := wf.GenerateMermaidDiagram()
+	// Generate workflow mermaid diagram
+	diagram := wf.Diagram()
 	fmt.Println(diagram)
 }
 
