@@ -2,7 +2,7 @@
 key: blog
 title: "🚀 Building a Petri Net-Based Workflow Engine in Go: From Theory to Production"
 date: 2025-06-18
-last_modified_at: 2025-06-21
+last_modified_at: 2025-06-23
 tags: [GoLang, Backend, DevOps, Workflow, StateMachine, PetriNet, Architecture, OpenSource]
 mermaid: true
 header:
@@ -15,6 +15,20 @@ excerpt: A deep dive into building a flexible, extensible workflow engine inspir
 ---
 
 A deep dive into building a flexible, extensible workflow engine inspired by Symfony's Workflow Component
+
+## 🆕 What's New in the Latest Updates?
+
+> **Note:** This workflow engine is still under active development and is **not yet production-ready**. Community contributions, feedback, and real-world adoption are needed to help mature the project and ensure its stability for production use. If you're interested in contributing or trying it out, please check out the [GitHub repository](https://github.com/ehabterra/workflow) and get involved!
+
+The [ehabterra/workflow](https://github.com/ehabterra/workflow) engine has seen major updates:
+
+- **History Layer**: Pluggable, reusable, supports custom fields, pagination, and filtering. Includes a SQLite implementation for audit trails and workflow history.
+- **Context-Aware Storage & Options Pattern**: Storage now supports custom fields and flexible options for advanced use cases.
+- **REST API & Web Interface (Examples)**: Example REST endpoints and a web UI for workflow management are now included.
+- **Mermaid Diagram Generation**: Improved visualization for workflow states and transitions.
+- **Feature Checklist & Roadmap**: Updated to reflect YAML/JSON config, validation, dynamic loading, and more.
+
+See the [GitHub repo](https://github.com/ehabterra/workflow) for full details and code examples.
 
 **Ever wondered how complex business processes are orchestrated in modern applications?** From order processing to document approval workflows, the need for robust state management is universal. After working with Symfony's Workflow Component and seeing the gap in Go's ecosystem, I decided to build a comprehensive workflow engine that brings the power of Petri nets to Go applications.
 
@@ -72,6 +86,14 @@ graph TD
 ```
 
 ## 🚀 Key Features That Make It Special
+
+- **Thread-Safe Workflow Registry**: Manage multiple workflows concurrently with atomic operations.
+- **Flexible, Context-Aware Storage**: Abstract storage interface with SQLite implementation, custom fields, and options pattern.
+- **Event-Driven Architecture**: Add hooks for before/after transitions and guards.
+- **Constraint System**: Attach business rules to transitions.
+- **History & Audit Trail**: Track all transitions and context changes (see examples for SQLite history).
+- **Mermaid Diagram Generation**: Visualize workflows for documentation and debugging.
+- **REST API & Web Interface (Examples)**: Try the example server for workflow management.
 
 ### 1. Thread-Safe Workflow Registry
 
@@ -284,255 +306,57 @@ stateDiagram-v2
 
 ## 🔧 Advanced Features
 
-### 1. Parallel Transitions
+### 1. Parallel Transitions & Branching
 
-Support for concurrent place transitions:
+Support for concurrent transitions and workflow branches:
 
 ```go
 // Apply multiple transitions simultaneously
 err := wf.Apply([]workflow.Place{"payment_processing", "inventory_check"})
 ```
 
-### 2. Workflow Manager
+### 2. History Layer & Audit Trail
 
-High-level interface for workflow lifecycle management:
-
-```go
-// Create manager with storage
-manager := workflow.NewManager(registry, storage)
-
-// Create and persist workflow
-wf, err := manager.CreateWorkflow("order-123", definition, "pending")
-if err != nil {
-    log.Fatal(err)
-}
-
-// Load workflow from storage
-wf, err = manager.GetWorkflow("order-123", definition)
-if err != nil {
-    log.Fatal(err)
-}
-
-// Save workflow state
-err = manager.SaveWorkflow("order-123", wf)
-if err != nil {
-    log.Fatal(err)
-}
-```
-
-### 3. Context Management
-
-Attach arbitrary data to workflows:
+Track every transition, actor, and context change:
 
 ```go
-// Set context values
-wf.SetContext("order_amount", 150.0)
-wf.SetContext("customer_id", "cust-456")
-wf.SetContext("metadata", map[string]interface{}{
-    "source": "web",
-    "priority": "high",
+import "github.com/ehabterra/workflow/history"
+
+historyStore := history.NewSQLiteHistory(db,
+    history.WithCustomFields(map[string]string{
+        "ip_address": "ip_address TEXT",
+    }),
+)
+historyStore.Initialize()
+
+// Save a transition with custom fields
+historyStore.SaveTransition(&history.TransitionRecord{
+    WorkflowID: "wf1",
+    FromState:  "draft",
+    ToState:    "review",
+    Transition: "submit",
+    Notes:      "Submitted for review",
+    Actor:      "alice",
+    CreatedAt:  time.Now(),
+    CustomFields: map[string]interface{}{
+        "ip_address": "127.0.0.1",
+    },
 })
 
-// Retrieve context values
-amount, ok := wf.Context("order_amount")
-if ok {
-    fmt.Printf("Order amount: $%.2f\n", amount.(float64))
+// List history with pagination
+records, err := historyStore.ListHistory("wf1", history.QueryOptions{Limit: 10, Offset: 0})
+for _, rec := range records {
+    fmt.Println(rec.FromState, rec.ToState, rec.Notes, rec.CustomFields["ip_address"])
 }
 ```
 
-## 🧪 Testing Your Workflows
+### 3. REST API & Web Interface (Examples)
 
-The engine makes testing workflows straightforward:
+The repo includes example REST endpoints and a web UI for managing workflows, transitions, and history.
 
-```go
-func TestOrderWorkflow(t *testing.T) {
-    // Create test workflow
-    definition := createOrderDefinition()
-    wf, err := workflow.NewWorkflow("test-order", definition, "pending")
-    require.NoError(t, err)
+### 4. YAML/JSON Configuration (Planned)
 
-    // Test valid transition
-    err = wf.Apply([]workflow.Place{"payment_processing"})
-    assert.NoError(t, err)
-    assert.Contains(t, wf.CurrentPlaces(), "payment_processing")
-
-    // Test invalid transition
-    err = wf.Apply([]workflow.Place{"delivered"})
-    assert.Error(t, err)
-
-    // Test constraint validation
-    wf.SetContext("order_amount", 50.0) // Below minimum
-    err = wf.Apply([]workflow.Place{"payment_approved"})
-    assert.Error(t, err)
-}
-```
-
-## 📈 Performance Benchmarks
-
-The engine is optimized for high-performance scenarios:
-
-```bash
-# Run benchmarks
-go test -benchmem -run=^$ -bench=. ./...
-
-# Example results:
-goos: darwin
-goarch: amd64
-pkg: github.com/ehabterra/workflow
-cpu: Intel(R) Core(TM) i9-9880H CPU @ 2.30GHz
-=== RUN   BenchmarkNewWorkflow
-BenchmarkNewWorkflow
-BenchmarkNewWorkflow-16                          7428621               156.6 ns/op            216 B/op          5 allocs/op
-=== RUN   BenchmarkWorkflow_Apply
-BenchmarkWorkflow_Apply
-BenchmarkWorkflow_Apply-16                       1876570               543.2 ns/op            712 B/op         14 allocs/op
-...
-```
-
-### Understanding the Benchmarks
-
-- **156.6 ns/op**: Creating a new workflow takes only 156 nanoseconds (7.4M workflows/second)
-- **543.2 ns/op**: Applying transitions takes 543 nanoseconds (1.8M transitions/second)
-- **216 B/op**: Memory allocation per workflow creation (very efficient)
-- **712 B/op**: Memory allocation per transition (minimal overhead)
-- **5-14 allocs/op**: Number of memory allocations (excellent for GC pressure)
-
-These results demonstrate that the engine can handle high-throughput scenarios with minimal resource overhead, making it suitable for production workloads.
-
-## 🚀 Getting Started
-
-### Installation
-
-```bash
-go get github.com/ehabterra/workflow
-```
-
-### Quick Start
-
-```go
-package main
-
-import (
-    "fmt"
-    "github.com/ehabterra/workflow"
-)
-
-func main() {
-    // Create a simple workflow
-    definition, _ := workflow.NewDefinition(
-        []workflow.Place{"start", "middle", "end"},
-        []workflow.Transition{
-            *createTransition("to-middle", []workflow.Place{"start"}, []workflow.Place{"middle"}),
-            *createTransition("to-end", []workflow.Place{"middle"}, []workflow.Place{"end"}),
-        },
-    )
-
-    wf, _ := workflow.NewWorkflow("my-workflow", definition, "start")
-    
-    // Apply transitions
-    wf.Apply([]workflow.Place{"middle"})
-    wf.Apply([]workflow.Place{"end"})
-    
-    fmt.Printf("Current places: %v\n", wf.CurrentPlaces())
-}
-```
-
-## 🔧 Troubleshooting Common Issues
-
-### 1. "Invalid transition" errors
-
-**Problem**: `workflow: invalid transition: cannot apply transition "x" from current places`
-
-**Solution**: Ensure the transition's input places match your current workflow state:
-
-```go
-// Check current places before applying transition
-currentPlaces := wf.CurrentPlaces()
-fmt.Printf("Current places: %v\n", currentPlaces)
-
-// Apply transition (validation is included)
-err := wf.Apply([]workflow.Place{"target_place"})
-if err != nil {
-    log.Printf("Transition failed: %v", err)
-    // Handle the error appropriately
-}
-```
-
-### 2. Constraint validation failures
-
-**Problem**: Transitions fail with constraint errors
-
-**Solution**: Check that required context values are set:
-
-```go
-// Set required context before applying transition
-wf.SetContext("order_amount", 150.0)
-wf.SetContext("customer_id", "cust-123")
-
-// Apply transition
-err := wf.Apply([]workflow.Place{"payment_processing"})
-if err != nil {
-    log.Printf("Constraint failed: %v", err)
-}
-```
-
-### 3. Concurrent access issues
-
-**Problem**: Race conditions when multiple goroutines access the same workflow
-
-**Solution**: Use the thread-safe registry or implement proper synchronization:
-
-```go
-// Use registry for thread-safe access
-registry := workflow.NewRegistry()
-registry.AddWorkflow(wf)
-
-// Get workflow safely from multiple goroutines
-wf, err := registry.Workflow("my-workflow")
-if err != nil {
-    log.Printf("Workflow not found: %v", err)
-}
-```
-
-### 4. Storage persistence issues
-
-**Problem**: Workflow state not persisting between application restarts
-
-**Solution**: Ensure proper storage initialization and error handling:
-
-```go
-// Initialize storage with error handling
-storage := workflow.NewSQLiteStorage("workflows.db")
-if err := storage.Initialize(); err != nil {
-    log.Fatalf("Failed to initialize storage: %v", err)
-}
-
-// Save workflow state explicitly
-manager := workflow.NewManager(registry, storage)
-if err := manager.SaveWorkflow("my-workflow", wf); err != nil {
-    log.Printf("Failed to save workflow: %v", err)
-}
-```
-
-### 5. Memory leaks with event listeners
-
-**Problem**: Event listeners accumulating over time
-
-**Solution**: Remove listeners when no longer needed:
-
-```go
-// Store listener reference for removal
-listener := func(event workflow.Event) error {
-    log.Printf("Transition: %s", event.Transition().Name())
-    return nil
-}
-
-// Add listener
-wf.AddEventListener(workflow.EventBeforeTransition, listener)
-
-// Remove listener when done
-wf.RemoveEventListener(workflow.EventBeforeTransition, listener)
-```
+Support for loading workflow definitions from YAML/JSON is on the roadmap.
 
 ## 🎯 Use Cases
 
@@ -549,7 +373,7 @@ The workflow engine is perfect for:
 
 ### High Priority
 - [ ] YAML/JSON configuration support
-- [ ] Standalone web interface
+- [ ] Standalone web interface for workflow management
 - [ ] Enhanced REST API endpoints
 - [ ] Workflow validation system
 - [ ] Dynamic workflow definition loading
@@ -564,6 +388,8 @@ The workflow engine is perfect for:
 ### Low Priority
 - [ ] Workflow statistics and analytics
 - [ ] Export/Import workflow definitions
+
+For the latest features and examples, see the [GitHub repository](https://github.com/ehabterra/workflow).
 
 ## 🤝 Contributing
 
@@ -591,7 +417,7 @@ Building this workflow engine has been an incredible journey. From the initial c
 - **Open Source**: Community-driven development and feedback
 - **Practical Design**: Real-world use cases and production considerations
 
-The engine is now ready for production use and continues to evolve based on community feedback and real-world requirements. Whether you're building a simple state machine or a complex business process orchestration system, this workflow engine provides the flexibility and reliability you need.
+The engine is still under active development and **not yet production-ready**. It continues to evolve based on community feedback, contributions, and real-world adoption. Whether you're interested in building a simple state machine or a complex business process orchestration system, your feedback and contributions are essential to help make this workflow engine robust and production-grade. Try it out, share your experiences, and help shape its future!
 
 **Ready to build your next workflow?** Check out the [GitHub repository](https://github.com/ehabterra/workflow) and start orchestrating your business processes with confidence!
 
