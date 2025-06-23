@@ -91,7 +91,7 @@ graph TD
 - **Constraint System**: Attach business rules to transitions.
 - **History & Audit Trail**: Track all transitions and context changes (see examples for SQLite history).
 - **Mermaid Diagram Generation**: Visualize workflows for documentation and debugging.
-- **REST API & Web Interface (Examples)**: Try the example server for workflow management.
+- **Web UI for Workflow Management (Examples)**: Try the example web interface for workflow management.
 
 ### 1. Thread-Safe Workflow Registry
 
@@ -348,9 +348,9 @@ for _, rec := range records {
 }
 ```
 
-### 3. REST API & Web Interface (Examples)
+### 3. Web UI for Workflow Management (Examples)
 
-The repo includes example REST endpoints and a web UI for managing workflows, transitions, and history.
+The repo includes an example web interface for managing workflows, transitions, and history. (No REST API is provided.)
 
 ### 4. YAML/JSON Configuration (Planned)
 
