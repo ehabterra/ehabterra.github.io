@@ -18,8 +18,6 @@ A deep dive into building a flexible, extensible workflow engine inspired by Sym
 
 ## 🆕 What's New in the Latest Updates?
 
-> **Note:** This workflow engine is still under active development and is **not yet production-ready**. Community contributions, feedback, and real-world adoption are needed to help mature the project and ensure its stability for production use. If you're interested in contributing or trying it out, please check out the [GitHub repository](https://github.com/ehabterra/workflow) and get involved!
-
 The [ehabterra/workflow](https://github.com/ehabterra/workflow) engine has seen major updates:
 
 - **History Layer**: Pluggable, reusable, supports custom fields, pagination, and filtering. Includes a SQLite implementation for audit trails and workflow history.
@@ -410,16 +408,16 @@ The project is open source and welcomes contributions! Here's how you can help:
 
 ## 🎉 Conclusion
 
-Building this workflow engine has been an incredible journey. From the initial concept inspired by Symfony's Workflow Component to a production-ready Go package, the project demonstrates the power of:
+Building this workflow engine has been an incredible journey. From the initial concept inspired by Symfony's Workflow Component to a feature-rich Go package, the project demonstrates the power of:
 
 - **Mathematical Foundations**: Petri nets provide a solid theoretical base
 - **Go's Strengths**: Concurrency, performance, and simplicity
 - **Open Source**: Community-driven development and feedback
 - **Practical Design**: Real-world use cases and production considerations
 
-The engine is still under active development and **not yet production-ready**. It continues to evolve based on community feedback, contributions, and real-world adoption. Whether you're interested in building a simple state machine or a complex business process orchestration system, your feedback and contributions are essential to help make this workflow engine robust and production-grade. Try it out, share your experiences, and help shape its future!
+> **Note:** This engine is **still under active development and not yet production-ready**. Community adoption, feedback, and contributions are essential to help mature the project and ensure its stability for real-world production use. If you're interested in building state machines or complex business process orchestration systems, your input and participation are highly encouraged!
 
-**Ready to build your next workflow?** Check out the [GitHub repository](https://github.com/ehabterra/workflow) and start orchestrating your business processes with confidence!
+**Ready to help shape the future of workflow orchestration in Go?** Check out the [GitHub repository](https://github.com/ehabterra/workflow), try it out, and join the community effort!
 
 ---
 
