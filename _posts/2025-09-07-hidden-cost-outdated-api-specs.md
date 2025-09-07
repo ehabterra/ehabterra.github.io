@@ -92,7 +92,7 @@ Cons:
 - Reviewers often miss annotation changes in code diffs.
 - Learning curve for annotation syntax and OpenAPI mapping.
 
-Note: The staleness/drift risk primarily affects annotation/comment-based code-first. Framework wrappers that infer from code (e.g., Fuego) keep specs aligned with implementation by construction.
+> **Note:** The staleness/drift risk primarily affects annotation/comment-based code-first. Framework wrappers that infer from code (e.g., Fuego) keep specs aligned with implementation by construction.
 
 Popular code‑first tools for Go:
 - [Fuego](https://github.com/go-fuego/fuego): Modern Go framework that generates OpenAPI 3 specs from code signatures using generics.
@@ -103,7 +103,7 @@ Popular code‑first tools for Go:
 
 Docs drift is not a tooling problem alone—it’s a process problem. The cure is feedback loops that fail fast when contract and code diverge.
 
-Must‑have guardrails:
+**Must‑have guardrails:**
 - Lint your spec (naming, consistency, auth, pagination, errors).
 - Diff specs across PRs; block breaking changes without a version plan.
 - Contract tests: run requests derived from the spec against your service or mocks.
@@ -114,7 +114,7 @@ Must‑have guardrails:
 
 ## Weaving It Into Go Workflows
 
-- Net/http, Gin, Echo, Chi, Fiber: pick your poison, but standardize middleware for auth, errors, pagination, correlation IDs.
+- `net/http`, `Gin`, `Echo`, `Chi`, `Fiber`: pick your poison, but standardize middleware for auth, errors, pagination, correlation IDs.
 - Define canonical error shapes; document and test them.
 - Keep examples next to handlers or in fixtures—use them to power both docs and tests.
 
