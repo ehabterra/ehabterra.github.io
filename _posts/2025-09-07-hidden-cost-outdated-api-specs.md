@@ -6,8 +6,8 @@ last_modified_at: 2025-09-07
 tags: [GoLang, Go, Backend, DevOps, OpenAPI, Architecture, API, Code-first, Spec-first]
 mermaid: true
 header:
-   teaser: /assets/images/apispec.jpg
-   image: /assets/images/apispec.jpg
+   teaser: /assets/images/apispec.png
+   image: /assets/images/apispec.png
 author: Ehab Terra
 permalink: /hidden-cost-outdated-api-specs
 subtitle: Why docs drift happens, how to avoid it, and where spec-first vs code-first really break
