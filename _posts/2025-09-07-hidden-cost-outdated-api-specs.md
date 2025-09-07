@@ -146,7 +146,7 @@ This is where [apispec](https://github.com/ehabterra/apispec) comes in—not as 
 # Basic usage
 apispec --output openapi.yaml                    # Generate spec
 apispec --config custom.yaml --output spec.yaml  # Custom patterns
-apispec --diagram diagram.html --write-metadata               # Debug with call graph
+apispec --diagram diagram.html --write-metadata  # Debug with call graph
 ```
 
 The tool performs comprehensive static analysis: it loads and type-checks all Go packages, detects the web framework automatically, builds a call graph to trace execution flow, and maps discovered patterns to OpenAPI 3.1 specifications. It handles complex Go features like generics, aliases, enums, and nested structs while providing safeguards against infinite recursion in large codebases.
