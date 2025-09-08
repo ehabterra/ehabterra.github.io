@@ -61,6 +61,7 @@ Popular spec‑first tools for Go:
 - [oapi-codegen](https://github.com/oapi-codegen/oapi-codegen): Generates Go code from OpenAPI 3.x specifications.
 
 **Design/documentation tools:** Stoplight, Redocly, SwaggerHub, Postman's API Builder.
+
 **Validation tools:** Spectral (linting), openapi-diff (breaking changes), Dredd/Prism (contract tests/mocks).
 
 ### Code‑First (Implementation‑First) 💻
