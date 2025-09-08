@@ -22,11 +22,7 @@ That week wasn't just annoying. It was real cost: lost time, brittle workarounds
 
 ## TL;DR: The Tool & The Vision 🎯
 
-**[apispec](https://github.com/ehabterra/apispec)** is an early experiment in making your Go code the single source of truth for API documentation. Instead of maintaining separate specs or annotations, it analyzes your actual handlers, types, and middleware to generate OpenAPI 3.1 specifications automatically.
-
-**The paradigm shift**: What if we stopped treating API specs as separate artifacts to maintain and started treating them as natural byproducts of well-structured code? apispec is a stepping stone toward that vision—where your running code is so expressive that documentation becomes impossible to get wrong.
-
-**Current state**: Under active development, supports Gin, Echo, Chi, Fiber, and net/http; uses AST analysis and call graphs. Not production-ready yet, but represents the beginning of a different approach to API documentation.
+**[apispec](https://github.com/ehabterra/apispec)** is an early experiment in making your Go code the single source of truth for API documentation. Instead of maintaining separate specs or annotations, it analyzes your actual handlers, types, and middleware to generate OpenAPI 3.1 specifications automatically—where your running code is so expressive that documentation becomes impossible to get wrong. Currently supports Gin, Echo, Chi, Fiber, and net/http using AST analysis and call graphs.
 
 ## What's a Spec, Really? (OpenAPI in 30 seconds) ⚡
 
