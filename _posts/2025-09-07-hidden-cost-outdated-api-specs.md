@@ -2,7 +2,7 @@
 key: blog
 title: "🪤 The Hidden Cost of Outdated API Specs (for Go Developers)"
 date: 2025-09-07
-last_modified_at: 2025-09-08
+last_modified_at: 2025-09-10
 tags: [GoLang, Go, Backend, DevOps, OpenAPI, Architecture, API, Code-first, Spec-first]
 mermaid: true
 header:
@@ -59,6 +59,8 @@ Popular spec‑first tools for Go:
 - [Goa](https://goa.design/): Design-first framework with its own DSL, generates complete servers and clients.
 - [go-swagger](https://github.com/go-swagger/go-swagger): Generates servers/clients from OpenAPI 2.0 specs.
 - [oapi-codegen](https://github.com/oapi-codegen/oapi-codegen): Generates Go code from OpenAPI 3.x specifications.
+- [ogen](https://github.com/ogen-go/ogen): OpenAPI 3.0/3.1 code generator for Go (server and client) with strong type-safety and validation.
+- [OpenAPI Generator](https://github.com/OpenAPITools/openapi-generator): Java-based tool that generates Go servers/clients from OpenAPI v2/v3 specs.
 
 **Design/documentation tools:** Stoplight, Redocly, SwaggerHub, Postman's API Builder.
 
