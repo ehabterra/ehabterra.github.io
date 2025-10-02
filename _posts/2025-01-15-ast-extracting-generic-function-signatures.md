@@ -1,8 +1,8 @@
 ---
 key: blog
 title: "🔍 Extracting Generic Function Signatures from Go AST: A Journey Through go/types"
-date: 2025-01-15
-last_modified_at: 2025-01-15
+date: 2025-10-02
+last_modified_at: 2025-10-02
 tags: [GoLang, Go, AST, Generics, go/types, Static Analysis, Compiler, Type System]
 mermaid: true
 header:
