@@ -173,11 +173,12 @@ I implemented a hybrid approach that uses `Info.Uses` as the primary method and 
 
 ```go
 func extractFunctionSignature(info *types.Info, callExpr *ast.CallExpr) string {
-    // First, try Info.Uses for complete generic signatures
+    // Simplified version - see full implementation below
     if ident, ok := callExpr.Fun.(*ast.Ident); ok {
         if obj := info.Uses[ident]; obj != nil {
-            if objType := obj.Type(); objType != nil {
-                return objType.String()
+            typ := obj.Type()
+            if basicTyp, ok := typ.(*types.Basic); !ok || basicTyp.Kind() != types.Invalid {
+                return typ.String()
             }
         }
     }
@@ -233,30 +234,46 @@ Here's how this is implemented in the [apispec project](https://github.com/ehabt
 
 ```go
 func extractFunctionSignature(info *types.Info, callExpr *ast.CallExpr) string {
-    // Try Info.Uses first for complete generic signatures
-    if ident, ok := callExpr.Fun.(*ast.Ident); ok {
-        if obj := info.Uses[ident]; obj != nil {
-            if objType := obj.Type(); objType != nil {
-                return objType.String()
-            }
-        }
+    if typ := getTypeWithGenerics(callExpr.Fun, info); typ != nil {
+        return typ.String()
     }
-    
-    // Handle selector expressions (e.g., pkg.Function)
-    if sel, ok := callExpr.Fun.(*ast.SelectorExpr); ok {
-        if obj := info.Uses[sel.Sel]; obj != nil {
-            if objType := obj.Type(); objType != nil {
-                return objType.String()
-            }
-        }
-    }
-    
-    // Fallback to TypeOf for built-in functions
-    if funType := info.TypeOf(callExpr.Fun); funType != nil {
-        return funType.String()
-    }
-    
     return ""
+}
+
+func getTypeWithGenerics(expr ast.Expr, info *types.Info) types.Type {
+    var (
+        instance types.Object
+        found    bool
+    )
+
+    if indexExpr, ok := expr.(*ast.IndexExpr); ok {
+        return getTypeWithGenerics(indexExpr.X, info)
+    }
+
+    // First try to get function information for generics
+    switch fun := expr.(type) {
+    case *ast.Ident:
+        function, found = info.Uses[fun]
+    case *ast.SelectorExpr:
+        function, found = info.Uses[fun.Sel]
+    case *ast.ParenExpr:
+        if ident, ok := fun.X.(*ast.Ident); ok {
+            function, found = info.Uses[ident]
+        }
+    }
+    if found {
+        typ := function.Type()
+        if basicTyp, ok := typ.(*types.Basic); !ok || basicTyp.Kind() != types.Invalid {
+            return typ
+        }
+    }
+
+    // Fallback to TypeOf for non-generic types
+    if typ := info.TypeOf(expr); typ != nil {
+        return typ
+    }
+
+    return nil
 }
 ```
 
