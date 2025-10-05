@@ -2,7 +2,7 @@
 key: blog
 title: "🔍 Extracting Generic Function Signatures from Go AST: A Journey Through go/types"
 date: 2025-10-02
-last_modified_at: 2025-10-02
+last_modified_at: 2025-10-05
 tags: [GoLang, Go, AST, Generics, go/types, Static Analysis, Compiler, Type System]
 mermaid: true
 header:
@@ -13,6 +13,13 @@ permalink: /ast-extracting-generic-function-signatures
 subtitle: How I solved the challenge of extracting generic function signatures using go/types.Info.Uses as a fallback to TypeOf
 excerpt: A deep dive into extracting generic function signatures from Go AST, exploring the limitations of go/types.Info.TypeOf and finding a robust solution using Info.Uses with TypeOf fallback.
 ---
+
+## TL;DR
+
+- `TypeOf` returns instantiated types from `Info.Types` (e.g., `func([]int)`), so it loses generic parameters and constraints.
+- `Info.Uses` returns the full declared signature for external identifiers, including generics and constraints.
+- Built-ins like `len` don’t appear in `Uses`; use `TypeOf` as a fallback.
+- The working approach: try `Uses` first; if missing or built-in, fall back to `TypeOf`.
 
 ## The Challenge: Extracting Generic Signatures from Go AST 🎯
 
@@ -34,7 +41,7 @@ func extractSignature(info *types.Info, callExpr *ast.CallExpr) string {
 }
 ```
 
-**The Problem**: `TypeOf` works great for regular functions but fails to extract generic type parameters for functions like those in `golang.org/x/exp/slices`. 
+**The Problem**: `TypeOf` works great for regular functions but fails to extract generic type parameters for functions like those in `golang.org/x/exp/slices`.
 
 Here's a concrete example. When analyzing this code:
 
@@ -91,18 +98,18 @@ Here's what the test results show:
 ```go
 // For a local generic function call: processData([]int{1, 2, 3})
 TypeOf: func(items []int) []int           // Instantiated signature
-Defs:   nil                              // Not in Defs (it's a use, not a definition)
-Uses:   processData (func[T any](items []T) []T)  // Complete generic signature!
+Defs:   nil                               // Not in Defs (it's a use, not a definition)
+Uses:   func[T any](items []T) []T        // Complete generic signature!
 
 // For a built-in function call: len([]int{1, 2, 3})  
 TypeOf: func([]int) int                  // Instantiated signature
 Defs:   nil                              // Built-ins aren't in Defs
-Uses:   len (invalid type)               // Limited information for built-ins
+Uses:   invalid type                     // Limited information for built-ins
 ```
 
 **Key insight**: `Defs` only contains locally defined objects, while `Uses` contains complete type information for external functions, including their generic signatures.
 
-This behavior is documented in the Go source code comment:
+This behavior is documented in the Go source code (see `TypeOf` implementation at [api.go:346](https://cs.opensource.google/go/go/+/refs/tags/go1.25.1:src/go/types/api.go;l=346)) and comments:
 
 > "For (possibly parenthesized) identifiers denoting built-in functions, the recorded signatures are call-site specific: if the call result is not a constant, the recorded type is an argument-specific signature. Otherwise, the recorded type is invalid."
 
@@ -188,7 +195,8 @@ func extractFunctionSignature(info *types.Info, callExpr *ast.CallExpr) string {
 
 This approach produces amazing results! Here are some examples of the signatures I can now extract:
 
-### Standard Library Functions with Generics
+### Generic functions in external packages (x/exp/slices)
+
 ```go
 // golang.org/x/exp/slices.Sort
 func[S ~[]E, E golang.org/x/exp/constraints.Ordered](x S)
@@ -201,6 +209,7 @@ func[S ~[]E, E comparable](s S, v E) bool
 ```
 
 ### Custom Generic Functions
+
 ```go
 // github.com/ehabterra/apispec/testdata/generic.DecodeJSON
 func[TData any](r *net/http.Request, v interface{}) (TData, error)
@@ -210,6 +219,7 @@ func[T any](items []T, processor func(T) error) error
 ```
 
 ### Built-in Functions (via TypeOf fallback)
+
 ```go
 // Built-in functions
 func len(v Type) int
@@ -259,8 +269,6 @@ The [apidiag UI](https://github.com/ehabterra/apispec/tree/main/cmd/apidiag) sho
 - **Type information** for each function call
 - **Generic instantiations** showing how generic types are resolved
 
-![apidiag UI showing generic function signatures](https://github.com/ehabterra/apispec/raw/main/docs/apidiag-ui.png)
-
 ## Key Takeaways 💡
 
 1. **Info.Uses is your friend**: For extracting complete generic function signatures, `Info.Uses` is the most reliable method in the `go/types` package.
@@ -297,6 +305,6 @@ If you're working on similar static analysis tools or need to extract detailed t
 - [go/types package documentation](https://pkg.go.dev/go/types)
 - [golang.org/x/exp/slices package](https://pkg.go.dev/golang.org/x/exp/slices)
 - [Go Blog: When to use generics](https://tip.golang.org/blog/when-generics)
-- [Go issue #47916: Additions to go/types to support type parameters](https://github.com/golang.go/issues/47916) - Discusses the need for new constructs like `Inferred` to handle type arguments
+- [Go issue #47916: Additions to go/types to support type parameters](https://github.com/golang/go/issues/47916) - Discusses the need for new constructs like `Inferred` to handle type arguments
 - [Go Blog: Deconstructing Type Parameters](https://go.dev/blog/deconstructing-type-parameters) - Provides context on the complexity of generic function signatures
 - [go/types/api.go TypeOf implementation](https://cs.opensource.google/go/go/+/refs/tags/go1.25.1:src/go/types/api.go;l=346) - Shows how TypeOf simply returns from the Types map
