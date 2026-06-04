@@ -1,0 +1,5 @@
+<nav class="dp-breadcrumb dp-kicker" aria-label="Breadcrumb" style="margin-bottom:1rem;">
+  <a href="{{ '/design-patterns/' | relative_url }}">Design Patterns</a>
+  {% if page.category %}<span> › </span><span>{{ page.category | capitalize }}</span>{% endif %}
+  <span> › </span><span aria-current="page">{{ page.title }}</span>
+</nav>

@@ -319,6 +319,13 @@ compress_html:
     envs: development
 
 
+# Collections
+collections:
+  patterns:
+    output: true
+    permalink: /design-patterns/:path/
+
+
 # Defaults
 defaults:
   # _posts
@@ -343,3 +350,14 @@ defaults:
         nav:
           - main
           - docs
+  # design patterns collection
+  - scope:
+      path: ""
+      type: patterns
+    values:
+      layout: pattern
+      dp: true
+      mermaid: true
+      author_profile: false
+      sidebar:
+        nav: "design-patterns"

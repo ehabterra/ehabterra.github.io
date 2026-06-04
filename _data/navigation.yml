@@ -1,6 +1,8 @@
 main:
   - title: "Home"
     url: /
+  - title: "Design Patterns"
+    url: /design-patterns/
   - title: "Posts"
     url: /year-archive/
   - title: "Categories"

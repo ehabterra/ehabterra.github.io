@@ -4,6 +4,11 @@
 
 <!-- Minimal Mistakes assets -->
 <link rel="stylesheet" href="{{ '/assets/css/main.css' | relative_url }}">
+{% if page.dp %}
+<!-- Design Patterns learning section -->
+<link rel="stylesheet" href="{{ '/assets/css/design-patterns.css' | relative_url }}">
+<script defer src="{{ '/assets/js/design-patterns.js' | relative_url }}"></script>
+{% endif %}
 <!-- For documents/pages whose URLs can change... -->
 <title>{{ page.title }}</title>
 {% include analytics.html %}

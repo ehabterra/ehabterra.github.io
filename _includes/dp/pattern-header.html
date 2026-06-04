@@ -1,0 +1,21 @@
+<header class="dp-hero">
+  <p class="dp-hero__eyebrow">
+    {% if page.kind == 'guide' %}{{ page.category | capitalize }} · Guide{% else %}{{ page.category | capitalize }} pattern{% if page.gof %} · Gang of Four{% endif %}{% endif %}{% if page.difficulty %} · {{ page.difficulty }}{% endif %}
+  </p>
+  <h1 itemprop="headline">{{ page.title }}</h1>
+  {% if page.intent %}<p class="dp-hero__lede">{{ page.intent }}</p>{% endif %}
+  {% if page.aka %}<p class="dp-kicker" style="margin-top:.9rem;">Also known as — {{ page.aka }}</p>{% endif %}
+
+  <div class="dp-badges">
+    <span class="dp-badge" data-cat="{{ page.category }}"><span class="dp-dot"></span>{{ page.category | capitalize }}</span>
+    {% if page.difficulty %}<span class="dp-badge dp-badge--diff">{{ page.difficulty }}</span>{% endif %}
+    {% if page.status %}<span class="dp-badge dp-badge--status-{{ page.status }}">{% if page.status == "ready" %}Complete{% else %}Draft — more coming{% endif %}</span>{% endif %}
+  </div>
+
+  {% if page.playground or page.source %}
+  <div class="dp-hero__cta">
+    {% if page.playground %}<a class="dp-btn dp-btn--primary" href="{{ page.playground }}" target="_blank" rel="noopener">▶ Run in Go Playground</a>{% endif %}
+    {% if page.source %}<a class="dp-btn dp-btn--ghost" href="{{ page.source }}" target="_blank" rel="noopener">⌨ View Go source on GitHub</a>{% endif %}
+  </div>
+  {% endif %}
+</header>

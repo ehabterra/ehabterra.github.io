@@ -1,0 +1,83 @@
+---
+slug: stdlib-patterns
+title: "Patterns in the Go Standard Library"
+category: stdlib
+kind: guide
+order: 34
+difficulty: "Reference"
+status: ready
+intent: "A tour of the classic design patterns hiding in plain sight across Go's standard library."
+related:
+  - decorator
+  - strategy
+  - adapter
+  - iterator
+---
+
+The best way to internalize a pattern is to spot it in code you already use. Go's standard library is full of them — often in a form so natural you never noticed there was a "pattern" at all. Here's a map.
+
+<div class="dp-callout dp-callout--intent" markdown="1">
+<p class="dp-callout__title">🎯 Why this matters</p>
+
+If you can see that `gzip.NewWriter` is a Decorator and `sort.Slice` is a Strategy, you've understood both the pattern *and* idiomatic Go at the same time. Patterns stop being abstract and become muscle memory.
+
+</div>
+
+## The map
+
+| Pattern | In the standard library | How it shows up |
+|---|---|---|
+| **Decorator** | `gzip.NewWriter`, `bufio.NewReader`, `io.MultiWriter` | Each wraps an `io.Writer`/`io.Reader` and adds behavior while keeping the same interface. |
+| **Adapter** | `strings.NewReader`, `bytes.NewBuffer`, `http.HandlerFunc` | Make one type satisfy the interface another API expects. |
+| **Strategy** | `sort.Slice(s, less)`, `strings.Map`, `template.FuncMap` | Pass the algorithm in as a function. |
+| **Iterator** | `bufio.Scanner`, `sql.Rows`, range-over-func (Go 1.23+) | Walk a sequence without exposing its internals. |
+| **Singleton** | `sync.Once`, `http.DefaultClient`, package `init()` | Exactly one instance, initialized once. |
+| **Factory** | `sql.Open`, `crypto/tls` config → `tls.Conn` | A function returns an interface; the concrete type is chosen for you. |
+| **Template Method** | `http` middleware, `text/template` execution | A fixed skeleton with caller-supplied steps. |
+| **Chain of Responsibility** | `net/http` middleware chains | Each handler can act, then pass to the next. |
+| **Observer / Pub-Sub** | channels + goroutines, `context.Context` cancellation | Broadcast a change to many listeners. |
+| **Command** | `os/exec.Cmd`, `flag` actions | An action captured as a configurable object. |
+| **Visitor** | `filepath.WalkDir`, `go/ast.Inspect` | An operation applied across a structure's nodes. |
+| **Null Object** | `io.Discard` | A do-nothing implementation that removes nil checks. |
+| **Bridge** | `io.Writer` ↔ `os.File`, `net.Conn` | The interface separates the consumer from concrete implementations. |
+
+## A few worth seeing up close
+
+### Decorator — `io` wrappers
+
+```go
+// Each layer wraps the previous and keeps the io.Writer interface.
+f, _ := os.Create("out.gz")
+gz := gzip.NewWriter(f)        // decorate: add compression
+buf := bufio.NewWriter(gz)     // decorate: add buffering
+fmt.Fprintln(buf, "hello")     // writes flow buf → gz → file
+```
+
+### Strategy — `sort.Slice`
+
+{% raw %}
+```go
+people := []Person{{"Ada", 36}, {"Linus", 54}}
+sort.Slice(people, func(i, j int) bool { // the comparison strategy
+	return people[i].Age < people[j].Age
+})
+```
+{% endraw %}
+
+### Adapter — `http.HandlerFunc`
+
+```go
+// A plain function becomes an http.Handler by adapting it.
+var h http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintln(w, "hi")
+})
+```
+
+<div class="dp-callout dp-callout--go" markdown="1">
+<p class="dp-callout__title">🐹 The takeaway</p>
+
+Go rarely names these patterns, because its interfaces and functions make them feel like ordinary code. That's the point: in Go, a "pattern" is usually just the natural shape the language nudges you toward.
+
+</div>
+
+As you work through the individual pattern pages, come back here — each one links to its standard-library home so you can connect the theory to code you ship every day.
