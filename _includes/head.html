@@ -2,13 +2,15 @@
 {% include mermaid.html %}
 {% endif %}
 
+<!-- Google Fonts — shared type system with ehabterra.com -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
+
 <!-- Minimal Mistakes assets -->
 <link rel="stylesheet" href="{{ '/assets/css/main.css' | relative_url }}">
-{% if page.dp %}
-<!-- Design Patterns learning section -->
-<link rel="stylesheet" href="{{ '/assets/css/design-patterns.css' | relative_url }}">
-<script defer src="{{ '/assets/js/design-patterns.js' | relative_url }}"></script>
-{% endif %}
+<!-- Site theme — cohesive with ehabterra.com -->
+<link rel="stylesheet" href="{{ '/assets/css/site.css' | relative_url }}">
 <!-- For documents/pages whose URLs can change... -->
 <title>{{ page.title }}</title>
 {% include analytics.html %}

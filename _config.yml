@@ -17,11 +17,11 @@ minimal_mistakes_skin    : "dark" # "air", "aqua", "contrast", "dark", "dirt", "
 # Site Settings
 locale                   : "en-US"
 rtl                      : # true, false (default) # turns direction of the page into right to left for RTL languages
-title                    : "Ehab's Website"
-title_separator          : "-"
+title                    : "Ehab Terra"
+title_separator          : "·"
 subtitle                 : # site tagline that appears below site title in masthead
 name                     : "Ehab Terra"
-description              : "An amazing website."
+description              : "Writing on backend systems, Go, and software architecture — plus open-source developer tools and visual learning references."
 url                      : https://ehabterra.github.io # the base hostname & protocol for your site e.g. "https://mmistakes.github.io"
 baseurl                  : # the subpath of your site, e.g. "/blog"
 repository               : # GitHub username/repo-name e.g. "mmistakes/minimal-mistakes"
@@ -115,22 +115,13 @@ analytics:
 author:
   name             : "Ehab Terra"
   avatar           : # path of avatar image, e.g. "/assets/images/bio-photo.jpg"
-  bio              : "I'm a **Gopher (Go enthusiast)** and systems architect"
-  location         : "Egypt"
+  bio              : "Software architect and Go engineer. Backend systems, language internals, and software architecture."
+  location         :
   email            :
   links:
-    - label: "Email"
-      icon: "fas fa-fw fa-envelope-square"
-      url: "mailto:ehabterra@hotmail.com"
-    - label: "Website"
+    - label: "Main site"
       icon: "fas fa-fw fa-link"
-      url: "https://ehabterra.github.io"
-    - label: "Twitter"
-      icon: "fab fa-fw fa-twitter-square"
-      # url: "https://twitter.com/"
-    - label: "Facebook"
-      icon: "fab fa-fw fa-facebook-square"
-      # url: "https://facebook.com/"
+      url: "https://ehabterra.com"
     - label: "GitHub"
       icon: "fab fa-fw fa-github"
       url: "https://github.com/ehabterra"
@@ -141,24 +132,15 @@ author:
 # Site Footer
 footer:
   links:
-    - label: "Linkedin"
-      icon: "fab fa-fw fa-linkedin"
-      url: "https://www.linkedin.com/in/ehab-terra"
-    - label: "Facebook"
-      icon: "fab fa-fw fa-facebook-square"
-      # url:
+    - label: "Main site"
+      icon: "fas fa-fw fa-link"
+      url: "https://ehabterra.com"
     - label: "GitHub"
       icon: "fab fa-fw fa-github"
       url: "https://github.com/ehabterra"
-    - label: "GitLab"
-      icon: "fab fa-fw fa-gitlab"
-      # url:
-    - label: "Bitbucket"
-      icon: "fab fa-fw fa-bitbucket"
-      # url:
-    - label: "Instagram"
-      icon: "fab fa-fw fa-instagram"
-      # url:
+    - label: "LinkedIn"
+      icon: "fab fa-fw fa-linkedin"
+      url: "https://www.linkedin.com/in/ehab-terra"
 
 
 # Reading Files
@@ -319,13 +301,6 @@ compress_html:
     envs: development
 
 
-# Collections
-collections:
-  patterns:
-    output: true
-    permalink: /design-patterns/:path/
-
-
 # Defaults
 defaults:
   # _posts
@@ -350,14 +325,3 @@ defaults:
         nav:
           - main
           - docs
-  # design patterns collection
-  - scope:
-      path: ""
-      type: patterns
-    values:
-      layout: pattern
-      dp: true
-      mermaid: true
-      author_profile: false
-      sidebar:
-        nav: "design-patterns"

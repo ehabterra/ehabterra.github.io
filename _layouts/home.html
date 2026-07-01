@@ -1,0 +1,62 @@
+---
+layout: default
+---
+
+<div id="main" role="main">
+  <div class="home">
+
+    <section class="hero">
+      <p class="hero__eyebrow">Ehab Terra</p>
+      <h1 class="hero__title">
+        I build developer tools and learning references —<br class="hero__br">
+        <span class="hero__grad">and write about how they work.</span>
+      </h1>
+      <p class="hero__lede">{{ site.author.bio | markdownify | strip_html }}</p>
+      <div class="hero__cta">
+        <a class="btn btn--primary" href="#projects">Explore the projects</a>
+        <a class="btn btn--ghost" href="#writing">Read the writing</a>
+      </div>
+    </section>
+
+    {% if content != "" %}<div class="home__intro">{{ content }}</div>{% endif %}
+
+    <section id="projects" class="section">
+      <div class="section__head">
+        <h2>Projects &amp; references</h2>
+        <p>Tools I've shipped and the visual references I maintain — each lives on its own site.</p>
+      </div>
+      <div class="eco-grid">
+        {% for p in site.data.ecosystem %}
+        <a class="eco-card" href="{{ p.url }}" rel="me noopener">
+          <div class="eco-card__top">
+            <span class="eco-tag eco-tag--{{ p.kind | downcase }}">{{ p.kind }}</span>
+            {% if p.repo %}<span class="eco-card__repo" aria-hidden="true">↗ code</span>{% endif %}
+          </div>
+          <h3 class="eco-card__title" dir="auto">{{ p.name }}</h3>
+          <p class="eco-card__tagline" dir="auto">{{ p.tagline }}</p>
+          <p class="eco-card__desc">{{ p.description }}</p>
+          <span class="eco-card__go">Visit <span aria-hidden="true">→</span></span>
+        </a>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section id="writing" class="section">
+      <div class="section__head">
+        <h2>Latest writing</h2>
+        <a class="section__more" href="{{ '/year-archive/' | relative_url }}">All posts <span aria-hidden="true">→</span></a>
+      </div>
+      <div class="post-list">
+        {% for post in site.posts limit: 5 %}
+        <a class="post-item" href="{{ post.url | relative_url }}">
+          <time class="post-item__date" datetime="{{ post.date | date_to_xmlschema }}">{{ post.date | date: "%b %-d, %Y" }}</time>
+          <h3 class="post-item__title">{{ post.title }}</h3>
+          {% if post.excerpt %}<p class="post-item__excerpt">{{ post.excerpt | strip_html | truncate: 150 }}</p>{% endif %}
+          {% if post.tags %}<div class="post-item__tags">{% for t in post.tags limit: 4 %}<span>#{{ t }}</span>{% endfor %}</div>{% endif %}
+        </a>
+        {% endfor %}
+      </div>
+    </section>
+
+  </div>
+</div>

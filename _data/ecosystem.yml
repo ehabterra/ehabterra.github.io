@@ -1,0 +1,40 @@
+# The projects / subdomains surfaced on the home page.
+# kind is used for the small tag on each card.
+
+- name: "ehabterra.com"
+  kind: "Hub"
+  url: "https://ehabterra.com"
+  tagline: "Home base — everything in one place"
+  description: "Open-source Go projects, software-architecture references, and writing, gathered on one hub."
+
+- name: "The Go Reference"
+  kind: "Reference"
+  url: "https://go.ehabterra.com"
+  tagline: "go.ehabterra.com"
+  description: "A visual, Go-first reference across eleven tracks — fundamentals, data structures, concurrency, the standard library, internals, cloud-native and architecture — with diagrams, runnable code and quizzes."
+
+- name: "The Architecture Reference"
+  kind: "Reference"
+  url: "https://arch.ehabterra.com"
+  tagline: "arch.ehabterra.com"
+  description: "A visual software-architecture reference across ten tracks — from foundations and styles to DDD, microservices, event-driven and distributed systems — distilled from 20+ landmark books."
+
+- name: "apispec"
+  kind: "Tool"
+  url: "https://apispec.ehabterra.com"
+  repo: "https://github.com/ehabterra/apispec"
+  tagline: "OpenAPI 3.1 from your Go code"
+  description: "Point it at a Go module and get an accurate OpenAPI 3.1 spec — inferred by walking the call graph, not from annotations that drift. Gin, Echo, Chi, Fiber, Gorilla Mux and net/http."
+
+- name: "workflow"
+  kind: "Tool"
+  url: "https://github.com/ehabterra/workflow"
+  repo: "https://github.com/ehabterra/workflow"
+  tagline: "A workflow engine in Go"
+  description: "A lightweight, embeddable workflow engine for orchestrating multi-step processes in Go."
+
+- name: "تعلُّم العربية"
+  kind: "Reference"
+  url: "https://ar.ehabterra.com"
+  tagline: "ar.ehabterra.com · Arabic"
+  description: "An interactive reference for learning Arabic — reading and writing, grammar, morphology, rhetoric and more — with examples, diagrams, quizzes and progress tracking."
