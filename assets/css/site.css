@@ -90,6 +90,9 @@ code, pre, kbd, samp, tt { font-family: var(--mono); }
   max-width: var(--maxw);
   margin: 0 auto;
   padding: 0 1.5rem;
+  /* Clip the hero's decorative glow (negative horizontal insets) so it never
+     forces a horizontal scroll on mobile; vertical bleed stays visible. */
+  overflow-x: clip;
 }
 
 /* ---- Hero ----------------------------------------------------------- */
