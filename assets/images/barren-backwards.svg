@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 300" width="660" height="300" role="img" aria-labelledby="t3 d3">
+  <title id="t3">Forward DFS with memoization versus a backwards fixpoint</title>
+  <desc id="d3">A forward depth-first search caches a wrong false for a node whose only route to a match runs through a back edge. Seeding from the matches and walking reverse edges until nothing changes gets it right, with no special case for cycles.</desc>
+  <defs>
+    <marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#6f7480"/></marker>
+    <marker id="r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#f0716a"/></marker>
+    <marker id="k" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#4ec9a0"/></marker>
+    <style>
+      .code { font-family: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace; }
+      .ui   { font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="660" height="300" rx="12" fill="#0f1117" stroke="#232631"/>
+
+  <rect x="16" y="18" width="300" height="264" rx="10" fill="#1a1214" stroke="#5a3437"/>
+  <text class="ui" x="34" y="44" font-size="12" font-weight="600" fill="#f0716a">Forward DFS + memo — wrong</text>
+
+  <g fill="none" stroke="#6f7480" stroke-width="1.3" marker-end="url(#g)">
+    <path d="M132,102 V126"/>
+    <path d="M166,85 H222"/>
+  </g>
+  <path d="M100,151 C70,151 70,85 96,85" fill="none" stroke="#f0716a" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#r)"/>
+  <text class="ui" x="64" y="118" font-size="9" fill="#f0716a" transform="rotate(-90 64 118)" text-anchor="middle">back edge</text>
+
+  <rect x="100" y="68" width="66" height="34" rx="7" fill="#171a22" stroke="#3a3f4c"/>
+  <text class="code" x="128" y="90" font-size="12" fill="#eeede8">x</text>
+  <rect x="100" y="134" width="66" height="34" rx="7" fill="#171a22" stroke="#3a3f4c"/>
+  <text class="code" x="128" y="156" font-size="12" fill="#eeede8">y</text>
+  <rect x="222" y="68" width="78" height="34" rx="7" fill="#10241c" stroke="#4ec9a0"/>
+  <text class="code" x="240" y="90" font-size="11.5" fill="#eeede8">match</text>
+
+  <text class="ui" x="34" y="200" font-size="10.5" fill="#b6b5b0">y asks about x — x is still on the stack,</text>
+  <text class="ui" x="34" y="218" font-size="10.5" fill="#b6b5b0">so the cycle guard answers “no”.</text>
+  <text class="code" x="34" y="244" font-size="11" fill="#f0716a">memo[y] = false</text>
+  <text class="ui" x="34" y="268" font-size="10.5" fill="#e8a25c">…but y → x → match is a real path.</text>
+
+  <rect x="344" y="18" width="300" height="264" rx="10" fill="#101c26" stroke="#34c3e6"/>
+  <text class="ui" x="362" y="44" font-size="12" font-weight="600" fill="#4ec9a0">Backwards from the matches — right</text>
+
+  <g fill="none" stroke="#4ec9a0" stroke-width="1.5" marker-end="url(#k)">
+    <path d="M546,85 H478"/>
+    <path d="M436,102 V126"/>
+  </g>
+
+  <rect x="546" y="68" width="78" height="34" rx="7" fill="#10241c" stroke="#4ec9a0"/>
+  <text class="code" x="564" y="90" font-size="11.5" fill="#eeede8">match</text>
+  <text class="ui" x="546" y="118" font-size="9.5" fill="#4ec9a0">seed</text>
+
+  <rect x="404" y="68" width="64" height="34" rx="7" fill="#10241c" stroke="#4ec9a0"/>
+  <text class="code" x="432" y="90" font-size="12" fill="#eeede8">x</text>
+  <rect x="404" y="134" width="64" height="34" rx="7" fill="#10241c" stroke="#4ec9a0"/>
+  <text class="code" x="432" y="156" font-size="12" fill="#eeede8">y</text>
+
+  <text class="ui" x="484" y="78" font-size="9.5" fill="#8a94a6">x is a parent</text>
+  <text class="ui" x="478" y="156" font-size="9.5" fill="#8a94a6">y is a parent</text>
+
+  <text class="ui" x="362" y="200" font-size="10.5" fill="#b6b5b0">Start at the calls that match, follow reverse</text>
+  <text class="ui" x="362" y="218" font-size="10.5" fill="#b6b5b0">edges, stop when nothing changes.</text>
+  <text class="code" x="362" y="244" font-size="11" fill="#4ec9a0">reach[y] = true</text>
+  <text class="ui" x="362" y="268" font-size="10.5" fill="#8a94a6">Cycles stop being a case at all.</text>
+</svg>

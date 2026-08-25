@@ -51,6 +51,9 @@ a { color: var(--accent); }
 a:hover, a:focus { color: var(--accent-soft); }
 
 code, pre, kbd, samp, tt { font-family: var(--mono); }
+/* 8-wide tabs push Go snippets off the column; 4 keeps them in it. */
+pre, code, .highlight pre { -moz-tab-size: 4; tab-size: 4; }
+.highlight pre, figure.highlight pre, div.highlight { overflow-x: auto; }
 
 /* ---- Masthead ------------------------------------------------------- */
 .masthead {

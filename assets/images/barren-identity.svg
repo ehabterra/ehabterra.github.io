@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 268" width="660" height="268" role="img" aria-labelledby="t2 d2">
+  <title id="t2">One question per node versus one question per call</title>
+  <desc id="d2">The same helper is rebuilt once per path, so the same question is asked hundreds of times. Because the answer depends only on the call, it is asked once per distinct call instead: 7.1 million questions become 12,882.</desc>
+  <defs>
+    <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#34c3e6"/>
+    </marker>
+    <style>
+      .code { font-family: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace; }
+      .ui   { font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="660" height="268" rx="12" fill="#0f1117" stroke="#232631"/>
+
+  <rect x="16" y="20" width="272" height="200" rx="10" fill="#131519" stroke="#3a3f4c" stroke-dasharray="5 4"/>
+  <text class="ui" x="32" y="44" font-size="12.5" font-weight="600" fill="#eeede8">Once per node</text>
+  <text class="ui" x="32" y="62" font-size="10.5" fill="#8a94a6">one copy of normalize per path that reaches it</text>
+
+  <g>
+    <rect x="32" y="76" width="150" height="26" rx="6" fill="#171a22" stroke="#3a3f4c"/>
+    <text class="code" x="44" y="93" font-size="11" fill="#b6b5b0">normalize</text>
+    <text class="ui" x="166" y="93" font-size="11" fill="#e8a25c">?</text>
+
+    <rect x="42" y="106" width="150" height="26" rx="6" fill="#171a22" stroke="#3a3f4c"/>
+    <text class="code" x="54" y="123" font-size="11" fill="#a0a6b2">normalize</text>
+    <text class="ui" x="176" y="123" font-size="11" fill="#e8a25c">?</text>
+
+    <rect x="52" y="136" width="150" height="26" rx="6" fill="#171a22" stroke="#343947"/>
+    <text class="code" x="64" y="153" font-size="11" fill="#878d99">normalize</text>
+    <text class="ui" x="186" y="153" font-size="11" fill="#a8743f">?</text>
+
+    <rect x="62" y="166" width="150" height="26" rx="6" fill="#171a22" stroke="#2c313d"/>
+    <text class="code" x="74" y="183" font-size="11" fill="#6f7480">normalize</text>
+    <text class="ui" x="196" y="183" font-size="11" fill="#8a6136">?</text>
+  </g>
+  <text class="ui" x="222" y="183" font-size="10.5" fill="#6f6f79">… ×554</text>
+  <text class="code" x="32" y="210" font-size="11" fill="#e8a25c">7,147,505 questions</text>
+
+  <line x1="300" y1="118" x2="352" y2="118" stroke="#34c3e6" stroke-width="1.5" marker-end="url(#ar2)"/>
+  <text class="ui" x="330" y="104" font-size="9.5" fill="#8a94a6" text-anchor="middle">same call,</text>
+  <text class="ui" x="330" y="140" font-size="9.5" fill="#8a94a6" text-anchor="middle">same answer</text>
+
+  <rect x="372" y="20" width="272" height="200" rx="10" fill="#101c26" stroke="#34c3e6"/>
+  <text class="ui" x="388" y="44" font-size="12.5" font-weight="600" fill="#eeede8">Once per call</text>
+  <text class="ui" x="388" y="62" font-size="10.5" fill="#8a94a6">the answer never depended on how you got here</text>
+
+  <rect x="388" y="112" width="150" height="30" rx="6" fill="#171a22" stroke="#34c3e6"/>
+  <text class="code" x="402" y="132" font-size="12" fill="#eeede8">normalize</text>
+  <text class="ui" x="552" y="132" font-size="12" fill="#4ec9a0">no</text>
+
+  <text class="code" x="388" y="210" font-size="11" fill="#4ec9a0">12,882 questions</text>
+
+  <text class="ui" x="16" y="248" font-size="11" fill="#b6b5b0">Three orders of magnitude fewer questions — before a single node is saved.</text>
+</svg>

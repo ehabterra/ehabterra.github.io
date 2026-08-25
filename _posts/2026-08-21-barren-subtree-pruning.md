@@ -3,101 +3,150 @@ key: blog
 title: "Seven Million Nodes, and the 1.5% That Mattered"
 date: 2026-08-21
 tags: [GoLang, Go, Performance, Optimization, Graphs, StaticAnalysis, apispec]
-mermaid: true
 header:
    teaser: /assets/images/apispec.png
    image: /assets/images/apispec.png
 author: Ehab Terra
 permalink: /barren-subtree-pruning
-subtitle: Pruning subtrees that provably match nothing made apispec 2–11× faster — and on one project the spec got bigger
-excerpt: Pruning subtrees that provably match nothing made apispec 2–11× faster — and on one project the spec got bigger
+subtitle: Struct packing saved 2%. A smarter call graph made it worse. Proving 97.6% of the work could be skipped made it 11× faster
+excerpt: Struct packing saved 2%. A smarter call graph made it worse. Proving 97.6% of the work could be skipped made it 11× faster
 ---
 
-## Why this tool walks your code at all
+## The whole problem, in one file
 
-[apispec](https://github.com/ehabterra/apispec) reads Go source and writes an OpenAPI spec from it. The usual alternative is annotation comments above every handler, and those drift: someone edits the handler, forgets the comment, and the documentation is now politely lying. Generating from the code itself is the whole point.
+[apispec](https://github.com/ehabterra/apispec) reads Go source and writes an OpenAPI spec from it — no annotation comments, no `swag init`, just the code. Here is a program small enough to hold in your head. It is a real fixture in the repo, and it is the entire subject of this post:
 
-But the code doesn't hand you a spec. A route registration says "POST /orders goes to createOrder" and stops there — what the endpoint actually accepts and returns lives in the handler's body, often several calls deep, behind a binding helper here and a response wrapper there. The only way to find it is to follow the calls, so that's what the tool does.
+```go
+func createOrder(w http.ResponseWriter, r *http.Request) {
+	var req CreateOrderRequest
+	_ = json.NewDecoder(r.Body).Decode(&req)
 
-On a small service that walk is instant. On a big module it got slow — and honestly, slow wasn't even the bad part. The walk has budgets, because it has to — dense call graphs expand forever without them — and when a run hits one, it stops early and the spec quietly documents less than the truth. No error. Just an API document with things missing.
+	order := Order{
+		ID:    normalize(req.SKU),
+		SKU:   normalize(req.SKU),
+		Total: total(req.Quantity),
+	}
+	w.WriteHeader(http.StatusCreated)
+	_ = json.NewEncoder(w).Encode(order)
+}
 
-So this is the story of making the walk cheap enough that the budgets stop biting. It ends somewhere I didn't see coming: on one project, the optimised build produced a *bigger* spec.
-
-## The number that embarrassed me
-
-Inside the tool, the walk starts at each route registration and expands the call graph down to the real handler into what the code calls a "tracker tree". An extraction pass then walks that tree asking a set of *matchers* — one family each for routes, mounts, security, request bodies, responses and parameters — which nodes have something to say about the spec.
-
-Here's the design decision that came back to bite me: the tree materialises one node per *path*. A helper reachable along ten thousand distinct paths gets built ten thousand times. I knew that was wasteful in principle; I had no idea how wasteful until I put a counter in:
-
-```
-distinct callee keys                       =    12,882
-nodes materialised                         = 7,147,505
-nodes visited by the extraction walk       = 7,103,742
-nodes whose ENTIRE subtree matched nothing = 6,930,424   (97.6%)
-nodes that ever matched                    =   104,156    (1.5%)
-```
-
-That's a 163-route service. I built 7.1 million nodes to consult 104 thousand of them. Everything else was string utilities, validation helpers, logging — code that can't possibly say anything about an API, rebuilt once per path, visited, and thrown away.
-
-```mermaid
-graph TD
-    R["POST /orders"] --> H[createOrder]
-    H --> D["json.Decode — matches"]
-    H --> E["json.Encode — matches"]
-    H --> N[normalize]
-    N --> T[trim]
-    T --> C[classify]
-    C --> S[score]
-    C --> W[weigh]
-    W -->|cycle| N
-    classDef hit fill:#e6f4ea,stroke:#2e7d32,stroke-width:2px,color:#1b1b1b;
-    classDef barren fill:#f5f5f5,stroke:#999,stroke-dasharray:4,color:#1b1b1b;
-    class D,E hit;
-    class N,T,C,S,W barren;
+func main() {
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /orders", createOrder)
+	mux.HandleFunc("GET /orders", listOrders)
+	_ = http.ListenAndServe(":8080", mux)
+}
 ```
 
-The dashed part is where the millions live. On a real project it isn't five helpers, it's most of the codebase, and the per-path unfolding multiplies it by every path that reaches it.
+Four calls in there describe the API: `HandleFunc` gives the method and path, `Decode` gives the request body, `WriteHeader` gives the status, `Encode` gives the response schema. That's the spec.
 
-## The obvious idea, and the catch
+The rest of the file is `normalize`, `pad`, `trim`, `classify`, `score`, `weigh`, `total`, `price` and `surcharge` — string and arithmetic helpers, several of them mutually recursive:
 
-The idea is as old as it gets: before descending into a subtree, ask whether anything down there could possibly be interesting, and skip it if not. I'd been circling it for a while.
+```go
+// base cases elided
+func normalize(s string) string { return trim(pad(s)) }
+func trim(s string) string      { return classify(s) }
+func classify(s string) string  { return score(s) } // or weigh(s)
+func score(s string) string     { return weigh(s + "s") }
 
-The catch is the word *possibly*. The answer has to be **provably** no, not probably no — and I sat on this (issue [#318](https://github.com/ehabterra/apispec/issues/318)) longer than I'd like to admit, because a wrong "no" in a tool like this doesn't crash anything. I'll come back to what it does instead.
-
-## Why it wasn't a gamble here
-
-What saved me is a property the codebase had already committed to, for a different reason. Every matcher family's `MatchNode` is a **pure function of the call edge** — the callee's name, receiver and package, the caller's name. The extractor documents this and leans on it for its per-edge matcher memos; only the *extraction* step, which runs after a match, cares about a node's ancestry.
-
-Which means "does this subtree contain anything a matcher would accept" is a property of **content identity**, not of path. `normalize` matches nothing whether you reached it through `createOrder` or `listOrders` or forty layers of middleware.
-
-And that's exactly what the per-path unfolding couldn't exploit on its own — it was re-asking the same question millions of times about the same handful of distinct identities. So I compute the answer once over the *plan graph* — the ~12,900 content identities — instead of over the unfolded tree of 7.1 million nodes.
-
-```mermaid
-graph LR
-    subgraph before["Before: ask per node"]
-        A1[normalize] ~~~ A2[normalize] ~~~ A3[normalize] ~~~ A4["… ×550 per key"]
-    end
-    subgraph after["After: ask per identity"]
-        B1[normalize]
-    end
-    before -->|"same question, same answer"| after
+// and back to the top — the loop
+func weigh(s string) string { return normalize(s[:len(s)-1]) }
 ```
 
-Three orders of magnitude fewer questions, before a single node is saved. (If the move feels familiar, it's the one [hash consing](https://en.wikipedia.org/wiki/Hash_consing) makes: one answer per distinct content, not one per occurrence.)
+Not one of them can contribute a byte to an OpenAPI document. There is no HTTP in there, no JSON, no status code. The tool walked all of them anyway — and on a real project, it walked them millions of times.
 
-## The part that scared me
+![A route registration leading to a handler, three calls that describe the API, and a dashed cluster of nine helper functions that describe nothing](/assets/images/barren-tree.svg)
 
-I'll be honest about why I nearly didn't ship this. A bad prune here doesn't crash and doesn't log a wrong number. It produces a **silently smaller spec**.
+## Where the millions come from
 
-Skip one subtree that should have contributed, and a route, a request body, or a response quietly disappears from someone's API documentation. Nobody gets an error. The spec just says less than the truth and looks completely fine doing it. For a tool whose whole job is telling the truth about an API, that's worse than slow — slow is visible, wrong is not.
+`mux.HandleFunc("POST /orders", createOrder)` tells you the method and the path and then stops. What the endpoint actually accepts and returns lives in the handler body, and in real code it is rarely right there — it's behind a binding helper, a response wrapper, three layers of middleware. So the tool follows calls: start at the route registration, walk down through the handler, into whatever it calls, until something turns up that describes the API.
 
-Three things let me sleep.
+It builds that walk as a tree. Here is the design decision that cost me: the tree has **one node per path**, not one per function.
 
-**The predicate keeps anything that can reach a match.** It's not "does this node match" — it's "can this node's subtree *reach* a match". A barren ancestor of a matching node still gets built. So the extraction step that walks **up** from a matching node to resolve provenance is untouched: nothing a kept node can reach is ever pruned. If your first reaction to pruning was "but I need the parents later" — mine too, and this is the answer. The parents of anything that matters are, by construction, things that matter.
+```go
+func handler() { a(); b() }
+func a()       { helper() }
+func b()       { helper() }
+```
 
-If that shape rings a bell, it's the mark phase of a [tracing garbage collector](https://en.wikipedia.org/wiki/Tracing_garbage_collection): seed from the things you care about — roots there, goals here — and keep the transitive closure. It's also close kin to a backward [program slice](https://en.wikipedia.org/wiki/Program_slicing), Weiser's old question of what can affect this point.
+`helper` is reachable two ways, so it gets two nodes. Three callers, three nodes. That's per layer, and the layers multiply — a helper five levels down under a mesh of small functions is reached along thousands of distinct paths and rebuilt once for each. `weigh → normalize` closes a loop, and a loop only stops when a budget stops it.
 
-**The prune over-approximates on purpose.** To evaluate a matcher for an edge before any node exists, I hand it a stand-in — `edgeOnlyNode` — that carries the edge and answers everything else as an unparented, childless node.
+I knew this was wasteful. I did not know how wasteful until I put a counter in. On a 163-route service:
+
+```
+distinct functions the walk expands  =    12,882
+nodes actually built                 = 7,147,505
+nodes the extraction pass visited    = 7,103,742
+nodes whose whole subtree matched nothing = 6,930,424  (97.6%)
+nodes that ever matched anything          =   104,156   (1.5%)
+```
+
+7.1 million nodes built to consult 104 thousand. About 555 copies of the average function, and 97.6% of the tree is `normalize` and its friends.
+
+And slowness was not the worst of it. The walk has budgets — a node cap per route, a cap on repeated copies of one callee — because without them a dense call graph expands forever. When a run hits a cap, it stops early and the spec quietly documents less than the truth. No error, no warning in the output file. Just an API document with things missing. Hold onto that; it comes back at the end.
+
+## The question a user asked me first
+
+In September 2025 someone opened [issue #20](https://github.com/ehabterra/apispec/issues/20): a 23-endpoint Echo service, 67 packages, and apispec sat there for five minutes until they hit Ctrl-C. For scale, they noted that `swag` — the annotation-comment tool — scanned the same repo in about three seconds.
+
+I gave them the two answers I had. Lower the caps: `--max-nodes 5000 --max-recursion-depth 3`. And exclude what isn't API code: `--exclude-package "**/internal/**"`. Their reply was one question — if the tool already knows the router, "why would I need to exclude anything?" Shouldn't it just follow the code from the routes and visit only what matters?
+
+They were right, and both of my answers had been the same confession: the walk visits too much, and here are two knobs for rationing it. Worse, when I closed the issue I told them the tool now "intelligently follows the code path" and needed no manual exclusions — an overpromise it took until this work, most of a year later, to actually make true. The caps bound the waste; the exclude flags hand the *user* the job of pruning — the job the tool exists to do. That question was the correct spec for this work. What I didn't have was a way to make "only what matters" *provable* instead of hopeful, and a guess inside a prune is how routes go silently missing. So before the provable version, I reached for the cheaper levers everyone reaches for.
+
+## Three things that didn't fix it
+
+**Make each node smaller.** `LazyNode` is the most numerous allocation in the program, so I reordered fields to squeeze out struct padding — 104 bytes down to 96. That's [a whole post of its own](/go-struct-padding-2-percent), and the honest summary is: **1.7%**. Field ordering fixes bytes-per-item. My problem was items.
+
+**Make the call graph smarter.** apispec's call graph is syntactic — it records what the source writes, so a call through an interface is recorded against the interface, not against the method that will actually run. The principled fix is a real call graph: SSA plus VTA, which `golang.org/x/tools` will build for you. I did that work in [PR #250](https://github.com/ehabterra/apispec/pull/250), and it produced a better graph inside a worse program:
+
+- peak RSS on a large project: **3.15 GB → 4.62 GB (+46%)**
+- wall clock: **+19%**
+- of 10,182 places the two graphs disagreed, only ~7,400 were safe to act on. The other 2,810 were ambiguous or unexplained, and acting on all of them would have rewritten **12%** of the graph on the strength of a guess.
+
+It still sits behind a `--resolve-call-graph` flag, off by default, because I set the memory gate before I measured and it failed. Precision is not speed. Quite often it is the opposite: a more accurate answer about more things.
+
+**Wait for the runtime to get faster.** This one is tempting right now, because the runtime *is* getting faster at exactly this kind of heap. Go 1.26 turned on the [Green Tea garbage collector](https://go.dev/blog/greenteagc) by default: it marks and scans small objects in contiguous 8 KiB spans instead of one object at a time, for better memory locality, and the release notes expect a **10–40% cut in GC overhead** for GC-heavy programs. Go 1.27 [added size-specialized allocation routines](https://go.dev/doc/go1.27) — small allocations under 80 bytes get up to 30% cheaper, ~1% overall in allocation-heavy programs, for about 60 KB of extra binary.
+
+Both are real, and a tree of millions of 96-byte nodes is squarely the workload Green Tea is for (`LazyNode` misses the 1.27 sub-80-byte fast path by two words). I haven't measured apispec under Go 1.27 yet — that experiment is running as I write this — so those numbers are the release notes' claims, not mine. Here is why I don't expect them to change the conclusion. But I had already measured what the collector could give me, generating apispec's spec from its own repo: at GOGC 100, 300 and 600 the run took 13.7s, 13.7s and 14.1s — flat — while peak RSS climbed from 1.35 GB to 1.80 GB. The heap wasn't churning; it was *live*, so there was nothing for collection tuning to trade. A 10–40% cut in the GC's share doesn't answer a walk that visits 68 nodes for every one it needs. The runtime makes each node cheaper. It cannot make 7.1 million nodes into 405 thousand.
+
+One attempt bought 2%. One made it worse and added a class of bug I'd have to defend. One was never going to arrive at the right axis. What was left was the option issue #20 had pointed at all along: don't build the nodes at all.
+
+## The property that makes skipping safe
+
+Skipping needs a *provable* no, not a probable one — I'll come back to what a wrong "no" costs. Here's the proof, and it was already sitting in the codebase.
+
+apispec finds things in the tree with **matchers**: small declarative patterns, one family each for routes, mounts, security, request bodies, responses and parameters. A response matcher for HTTP frameworks looks like this:
+
+```go
+ResponsePattern{
+	CallRegex: `^(?i)(JSON|String|XML|YAML|ProtoBuf|Data|File|Redirect)$`,
+	StatusArgIndex: 0,
+	TypeArgIndex: 1,
+	TypeFromArg: true,
+}
+```
+
+Every question in there is about **one call**: what is the callee named, what package is it in, what is the receiver, who is the caller, what are the arguments. Not one of them asks how we got here. That's not an accident I discovered — the extractor documents it and already relies on it to memoise matchers per edge. Only *extraction*, which runs after a match, cares about a node's ancestry.
+
+Which means the question "is there anything under this function that a matcher would accept?" has the same answer no matter which path you arrive by. `normalize` matches nothing whether you reach it from `createOrder`, from `listOrders`, or through forty layers of middleware.
+
+So I stopped asking it per node and started asking it per function: once over the ~12,900 distinct calls, instead of 7.1 million times over their copies.
+
+![Left: the same helper stacked hundreds of times, each asked the same question. Right: one copy, asked once](/assets/images/barren-identity.svg)
+
+Three orders of magnitude fewer questions, before a single node is saved. If the move feels familiar, it's the one [hash consing](https://en.wikipedia.org/wiki/Hash_consing) makes: one answer per distinct content, not one per occurrence.
+
+## The predicate is "can reach", not "matches"
+
+This is the part I'd most want you to take away, because getting it wrong is silent.
+
+The test is **not** "does this call match". It is "**can this subtree reach a call that matches**".
+
+The difference is the entire safety argument. After a match, the extractor walks back *up* the tree to work out which route the match belongs to. If I dropped every node that didn't itself match, I'd cut the ground out from under every match I kept. "Can reach a match" keeps every ancestor of every match automatically: if a node can reach a match, it is kept, and its parents can reach that same match, so they are kept too. Nothing a kept node can reach is ever pruned.
+
+It's the mark phase of a [tracing GC](https://en.wikipedia.org/wiki/Tracing_garbage_collection) run in the other direction — seed from the things you care about, keep the transitive closure.
+
+To ask the question about a call before any node exists for it, the matcher gets a stand-in:
 
 ```go
 type edgeOnlyNode struct{ edge *metadata.CallGraphEdge }
@@ -107,45 +156,116 @@ func (n edgeOnlyNode) GetChildren() []TrackerNodeInterface { return nil }
 func (n edgeOnlyNode) GetEdge() *metadata.CallGraphEdge    { return n.edge }
 ```
 
-Today every `MatchNode` reads only `GetEdge()`. But say someone later writes a matcher that does consult ancestry. Through the stand-in it sees "no ancestry", and since every such check is a further condition to satisfy, it can only match **fewer** things than the real node would — never more. Fewer matches through the stand-in means fewer prunes, not more; the error falls toward keeping. That's the soundness-versus-precision trade every static analyser makes somewhere, and the [soundiness manifesto](https://soundiness.org) is the honest read on it.
+Today every matcher reads only `GetEdge()`. Suppose someone later writes one that consults ancestry: through the stand-in it sees *no* ancestry, and since any such check is one more condition to satisfy, it can only match **fewer** calls than a real node would. Fewer matches means fewer prunes. **The error falls toward keeping.** I wouldn't ship a prune where I couldn't finish that sentence.
 
-```mermaid
-graph TD
-    RN["real node<br/>edge + parent + children"] -->|"all conditions available"| M1["matcher: may match"]
-    EO["edgeOnlyNode<br/>edge only, rest nil"] -->|"extra conditions unmet"| M2["matcher: matches ≤ real node"]
-    M2 -->|"fewer matches ⇒ fewer prunes"| SAFE["errs toward keeping"]
+The maintenance hazard, stated plainly rather than left in a comment: the base predicate ORs across all six matcher families.
+
+```go
+func (e *Extractor) edgeMatchesAnyFamily(edge *metadata.CallGraphEdge) bool {
+	node := edgeOnlyNode{edge: edge}
+	for _, m := range e.routeMatchers {
+		if m.MatchNode(node) {
+			return true
+		}
+	}
+	// ... and mount, security, request, response, param
+	return false
+}
 ```
 
-**Every family is on the roll call.** The base predicate, `edgeMatchesAnyFamily`, ORs across all six matcher families, and every family the extraction walk consults *has* to be in that list. Leave one out and the prune drops subtrees that family would have matched — routes going quietly missing, the exact failure this whole thing guards against. I wrote that warning into the code comment in capitals, because it's the maintenance hazard here: a future seventh family has to show up to the roll call.
+Add a seventh family and forget this function, and the prune starts dropping subtrees that family would have matched. Routes go missing from someone's API docs, nothing errors, and the tool looks fine doing it. That's the failure mode this whole design is arranged around, and it's why the answer had to be provable rather than plausible.
 
-## The trap I nearly walked into
+## The bug I nearly shipped: cycles
 
-The reachability computation itself has one genuinely nasty trap in it, and it's the part of this I'd most want someone to steal.
+The obvious way to compute "can `x` reach a match" is a memoised DFS. In Go, roughly:
 
-My first instinct was a forward DFS with memoisation: can `x` reach a match? Ask its children, cache the answer. Over a DAG that works. Over a call graph — cycles everywhere — it's wrong in a very quiet way.
-
-Take `x → y`, `y → x` (a back edge), and `x → match`. The DFS enters `x`, recurses into `y`, and `y` asks about `x` — which is still *in progress*, so the cycle guard says no. `y` caches `false`. But `y → x → match` is a perfectly good path; the memo is poisoned, and fixing it forwards means condensing the strongly connected components first — [Tarjan's algorithm](https://en.wikipedia.org/wiki/Tarjan%27s_strongly_connected_components_algorithm) territory — or making repeated passes.
-
-So I ran the fixpoint **backwards** instead. While enumerating identities forwards I record *reverse* edges, seed the reachable-set with the identities whose own edge matches, then propagate: any parent of a reachable identity is reachable, until nothing changes. Reachability is a [least fixpoint](https://en.wikipedia.org/wiki/Least_fixed_point) over an OR, propagating from the goals reaches exactly the identities with a path to one — and cycles simply stop being a case.
-
-The reassuring part is that none of this is clever. It's textbook backwards [dataflow analysis](https://en.wikipedia.org/wiki/Data-flow_analysis) — the same direction [liveness analysis](https://en.wikipedia.org/wiki/Live-variable_analysis) runs, propagating from uses back toward definitions — and the propagate-until-quiet loop is a bog-standard worklist. I only really trusted it once I recognised the shape.
-
-```mermaid
-graph LR
-    subgraph fwd["Forward DFS + memo: wrong"]
-        X1[x] --> Y1[y]
-        Y1 -.->|"back edge — x in progress,<br/>y caches false"| X1
-        X1 --> M1[match]
-    end
-    subgraph bwd["Backwards from the match: right"]
-        M2["match (seed)"] ==>|"x is a parent ⇒ true"| X2[x]
-        X2 ==>|"y is a parent ⇒ true"| Y2[y]
-    end
+```go
+func canReach(f fn, memo, onPath map[fn]bool) bool {
+	if v, ok := memo[f]; ok {
+		return v
+	}
+	if onPath[f] {
+		return false // cycle guard
+	}
+	onPath[f] = true
+	res := matches(f)
+	for _, c := range children(f) {
+		res = res || canReach(c, memo, onPath)
+	}
+	onPath[f] = false
+	memo[f] = res // ← the bug
+	return res
+}
 ```
 
-Both passes are linear. There's a unit test pinning exactly the `x → y → x` shape, because this is the kind of bug that sails through every acyclic test you write.
+Correct on a DAG. Wrong on a call graph, which has cycles all over it — `weigh` calls `normalize` right there in the fixture.
 
-## What I got back
+Take `x → y`, `y → x`, and `x → match`. The walk enters `x`, recurses into `y`, and `y` asks about `x`. `x` is still on the path, so the guard answers `false`. Fine as a guard; fatal as a *cached* answer. `y` records `false` permanently, even though `y → x → match` is a perfectly good path. Fixing it forwards means condensing the strongly connected components first ([Tarjan's](https://en.wikipedia.org/wiki/Tarjan%27s_strongly_connected_components_algorithm) territory) or repeating the whole pass until it settles.
+
+So I ran it backwards:
+
+1. Walk forwards once to enumerate the functions, recording **reverse** edges (child → parents).
+2. Seed the reachable set with every function whose own call matches.
+3. Pop a reachable function, mark its parents reachable, push them. Repeat until the worklist is empty.
+
+![Forward DFS caching a wrong false on a back edge, versus seeding from the match and walking reverse edges](/assets/images/barren-backwards.svg)
+
+That's the whole thing (real names shortened for the page):
+
+```go
+func computeReach(
+	roots []key,
+	children func(key) []key, // the calls this call makes
+	matches func(key) bool,   // does this call itself match?
+) map[key]bool {
+	reach := map[key]bool{} // the answer, per distinct call
+	rev := map[key][]key{}  // child -> its parents
+	seen := map[key]bool{}
+	var frontier, seeds []key
+
+	visit := func(k key) {
+		if seen[k] {
+			return
+		}
+		seen[k] = true
+		frontier = append(frontier, k)
+		if matches(k) && !reach[k] {
+			reach[k] = true
+			seeds = append(seeds, k) // seeds the backwards pass
+		}
+	}
+
+	// Pass 1, forwards: enumerate every call, recording reverse edges.
+	for _, k := range roots {
+		visit(k)
+	}
+	for len(frontier) > 0 {
+		k := frontier[len(frontier)-1]
+		frontier = frontier[:len(frontier)-1]
+		for _, c := range children(k) {
+			rev[c] = append(rev[c], k)
+			visit(c)
+		}
+	}
+
+	// Pass 2, backwards: a parent of something reachable is reachable.
+	for len(seeds) > 0 {
+		k := seeds[len(seeds)-1]
+		seeds = seeds[:len(seeds)-1]
+		for _, p := range rev[k] {
+			if !reach[p] {
+				reach[p] = true
+				seeds = append(seeds, p)
+			}
+		}
+	}
+	return reach
+}
+```
+
+Both passes are linear, and there is no cycle case to handle — a node already marked reachable is simply never re-queued. The shape is textbook backwards [dataflow analysis](https://en.wikipedia.org/wiki/Data-flow_analysis), the same direction [liveness](https://en.wikipedia.org/wiki/Live-variable_analysis) runs, and I only really trusted it once I recognised that. There's a unit test pinning exactly the `x → y → x` graph, because this is the kind of bug that sails straight through every acyclic test you write.
+
+## What it bought
 
 Mapping-stage times, minima of three interleaved pairs:
 
@@ -155,54 +275,72 @@ Mapping-stage times, minima of three interleaved pairs:
 the apispec repo    6.58s -> 0.58s
 ```
 
-On the 163-route service the output is **byte-identical**, and deterministic across runs. That empty diff is the proof I actually cared about — not the benchmark.
+2.3× on the service, 11× on the repo, and 94% fewer nodes. But the number I actually cared about is that on the 163-route service the generated spec is **byte-identical**, and deterministic across runs. The benchmark said it was fast; only the empty diff said it was right.
 
 ## Then the diff wasn't empty
 
-On the apispec repo itself, the output *changed*. My stomach dropped when the diff came back non-empty — this was exactly the failure I'd spent weeks being afraid of. Then I read it, and it had only **gained**.
+On apispec's own repo, the output changed. And it had only **gained**.
 
-Remember the budgets — a per-route node cap, an instance cap on repeated call copies. The un-pruned baseline had been exhausting its per-route budget on 6 of 36 routes and dropping 8,706,027 call copies at the instance cap. Response bodies were silently missing from those routes, and had been for as long as anyone had run the tool on this repo.
+Remember the budgets. The unpruned baseline was exhausting its per-route node cap on 6 of 36 routes, and its instance cap was refusing 3,624,817 repeated call copies. Response bodies were silently missing from those routes, and had been for as long as anyone had run the tool on this repo.
 
-Pruning stopped spending the budget on barren subtrees, so it reached the parts that mattered, and the bodies came back. The instance cap went from dropping 3,624,817 copies to 509,218.
+Once the budget stopped being spent on `normalize` and friends, the walk reached the parts that mattered and the responses came back — `200` and `500` with real `$ref` schemas. The instance cap now refuses 509,218 copies instead of 3.6 million, and the per-route truncation warning disappeared from the 163-route service entirely.
 
-I wanted to be sure the pruned output was actually *converged*, not just differently truncated. So I raised both caps 20× on the pruned build — nothing changed. The same raise on the baseline didn't terminate in ten minutes.
+I wanted to be sure this was convergence, not a differently-shaped truncation, so I raised both caps 20× on the pruned build: nothing changed. The same raise on the baseline didn't finish in ten minutes.
 
-That's the effect I keep coming back to. When a system truncates under a budget, removing waste doesn't just save time — it converts straight into output. "Faster *and* better" usually smells like marketing; under a budget it's just arithmetic.
+That's the effect I keep coming back to. **When a system truncates under a budget, removing waste doesn't just save time — it converts directly into output.** "Faster *and* more complete" normally smells like marketing. Under a budget it's arithmetic.
 
-## Shipping it without breaking anyone
+It's also, finally, an honest answer to issue #20. The caps and the exclude flags were rationing; this is the tool doing what that user said it should have done from the start — follow the code from the routes and pay only for what can matter.
 
-The predicate belongs to the extractor, since the matcher families are its own — it installs the memoised edge predicate into the tree at setup. A nil predicate is the off switch and the default: `canReachMatch` answers `true` unconditionally without one. So anything that wants the full unfolding simply never installs one — the diagram server, which builds its own eager tree and never runs the extractor, doesn't even know the prune exists.
+## Run it yourself
 
-For a regression guard I built a fixture, `testdata/barren_subtree` ([PR #348](https://github.com/ehabterra/apispec/pull/348)): two routes wrapped around a deliberately dense, mutually recursive utility layer that matches nothing. The test asserts the paths, the request body, the status-coded response and the array response all survive, and its output is identical with and without pruning — so it's a **change detector**, not a test of the speedup. If a future edit to the predicate ever eats a route, that test flips, loudly.
+The fixture from the top of this post is in the repo:
 
-## What I'm keeping from this
+```bash
+git clone https://github.com/ehabterra/apispec && cd apispec
+go run ./cmd/apispec -d ./testdata/barren_subtree --output openapi.yaml
+```
 
-If you're staring at your own too-slow traversal, here's what this one taught me, roughly in the order it taught me:
+```yaml
+paths:
+  /orders:
+    post:
+      operationId: example.com/barrensubtree.createOrder
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/example_com_barrensubtree_CreateOrderRequest'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/example_com_barrensubtree_Order'
+```
 
-- I guessed "a lot of waste"; the counter said 97.6% barren against 1.5% useful. Counting consulted-versus-visited before touching anything is what justified the whole effort — and it pointed me at the walk itself, not the per-node cost.
-- The step that turned millions of questions into thousands wasn't the worklist loop — it was finding the invariant that made the answer path-independent. Here that was "matchers are pure in the edge", and it was the actual work.
-- I'd never prune on "does this look useful". Reachability is provable; "looks useful" is a heuristic, and a heuristic inside a prune is silent data loss on a delay.
-- The over-approximation was deliberate, and I could say exactly which way its error falls: anything the stand-in withholds can only cause keeping, never dropping. I wouldn't ship a prune where I couldn't finish that sentence.
-- Whatever the later stages walk *up* into had to survive, not just what they read. "Can reach a match" bought me every such ancestor for free.
-- Cycles are what pushed me to run the fixpoint backwards from the goal. The forward memoised DFS was my first draft, and its premature cached negatives would have been a production bug — the quiet kind.
-- I went hunting for every consumer of the walk: every matcher family in the predicate, every caller of the tree accounted for or opted out via the nil default. The one you forget is a hole nobody sees.
-- The proof I trusted was a byte-identical diff on real output, plus a fixture that fails loud. The benchmark told me it was fast; only the diff told me it was right.
-- And under a budget, saved work is found output. That's where the extra spec content came from.
+The nine helpers don't appear, because they never could. What changed is that the tool no longer pays to find that out.
 
-One honest note to end on: none of this transfers as a recipe. The prune was sound because of a property specific to this system — matchers pure in the edge — and without that, everything above is just a fast way to lose data. Finding your system's version of that property is the job; the loop that exploits it is an afternoon.
+That fixture is also the regression guard ([PR #348](https://github.com/ehabterra/apispec/pull/348)): its output is identical with and without pruning, so it's a change detector rather than a test of the speedup. If a future edit to the predicate ever eats a route, it fails loudly. And the prune has an off switch that costs nothing — a nil predicate is the default, and `canReachMatch` then answers `true` unconditionally, so anything wanting the full tree (the diagram server, which never runs the extractor) is untouched.
+
+## What this taught me
+
+- **The best problem statement was sitting in my own issue tracker.** A user asked in one sentence what took me a year to build, and my first response was to hand them configuration. When your answer to "why is it slow" is a knob, the knob is usually an apology for an algorithm.
+- **Count distinct versus copies before optimising anything.** I guessed "a lot of waste". The counter said 97.6% barren against 1.5% useful, and that ratio is what justified the work — and pointed at the walk itself rather than the cost of a node.
+- **A smaller item doesn't fix a count problem.** Padding was free and permanent and worth 1.7%. A faster runtime is the same lesson, just outsourced: Green Tea and cheaper mallocs shave constants off work that shouldn't exist. Wrong axis, both times.
+- **A more precise answer is not a faster one.** SSA+VTA gave a better call graph for +46% memory. Sometimes the win is doing less, not doing better.
+- **Name the property that makes skipping safe, out loud.** Here it was "matchers read only the call edge". Finding it was the actual work; the loop that exploits it took an afternoon.
+- **Say which direction your approximation errs.** Anything the stand-in withholds can only cause keeping, never dropping. If you can't finish that sentence, you're shipping a heuristic that loses data on a delay.
+- **On a cyclic graph, seed from the goal and go backwards.** The forward memoised DFS was my first draft, and its premature cached negatives would have been the quiet kind of production bug.
+- **Under a budget, saved work is found output.** That's where the extra spec content came from, and I didn't see it coming.
 
 ## Further reading
 
-Signposts, in case any of this itched:
-
-- [Data-flow analysis](https://en.wikipedia.org/wiki/Data-flow_analysis) — the general frame; the prune's fixpoint is one tiny instance of it.
-- [Live-variable analysis](https://en.wikipedia.org/wiki/Live-variable_analysis) — the classic backwards problem. If you've ever written liveness, you've already written this post's core loop.
-- [Tarjan's SCC algorithm](https://en.wikipedia.org/wiki/Tarjan%27s_strongly_connected_components_algorithm) — what I'd have needed if I'd insisted on going forwards through the cycles.
-- [Program slicing](https://en.wikipedia.org/wiki/Program_slicing) — Weiser's idea from 1981; "keep what can reach the goal" becomes a whole field once the criterion gets richer than mine.
-- [In Defense of Soundiness: A Manifesto](https://soundiness.org) (Livshits et al., CACM 2015) — short and honest about the fact that every real analyser over-approximates somewhere, and the sin is not saying where.
-- Tip & Palsberg, "Scalable Propagation-Based Call Graph Construction Algorithms" (OOPSLA 2000) — where call graphs come from in the first place: the ladder of cheap-to-precise algorithms between CHA and full points-to analysis.
-- [golang.org/x/tools/go/callgraph](https://pkg.go.dev/golang.org/x/tools/go/callgraph) — the Go implementations of that ladder, VTA included, if you'd rather read code than papers.
+- [Data-flow analysis](https://en.wikipedia.org/wiki/Data-flow_analysis) and [live-variable analysis](https://en.wikipedia.org/wiki/Live-variable_analysis) — the general frame. If you've ever written liveness, you've already written this post's core loop.
+- [Program slicing](https://en.wikipedia.org/wiki/Program_slicing) — Weiser's 1981 idea; "keep what can reach the goal" becomes a whole field once the criterion gets richer than mine.
+- [In Defense of Soundiness: A Manifesto](https://soundiness.org) — short and honest about the fact that every real analyser over-approximates somewhere, and that the sin is not saying where.
+- [golang.org/x/tools/go/callgraph](https://pkg.go.dev/golang.org/x/tools/go/callgraph) — the Go implementations of CHA, RTA and VTA, if you want the call graph I measured in PR #250.
 
 ---
 
-*The implementation lives in `internal/spec/prune.go` [in the repo](https://github.com/ehabterra/apispec), with the soundness argument written into the doc comments — issue #318, PR #348.*
+*The implementation is `internal/spec/prune.go` [in the repo](https://github.com/ehabterra/apispec), with the soundness argument in the doc comments — issue #318, PR #348.*
