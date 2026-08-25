@@ -93,7 +93,7 @@ I gave them the two answers I had. Lower the caps: `--max-nodes 5000 --max-recur
 
 They were right, and both of my answers had been the same confession: the walk visits too much, and here are two knobs for rationing it. Worse, when I closed the issue I told them the tool now "intelligently follows the code path" and needed no manual exclusions — an overpromise it took until this work, most of a year later, to actually make true. The caps bound the waste; the exclude flags hand the *user* the job of pruning — the job the tool exists to do. That question was the correct spec for this work. What I didn't have was a way to make "only what matters" *provable* instead of hopeful, and a guess inside a prune is how routes go silently missing. So before the provable version, I reached for the cheaper levers everyone reaches for.
 
-## Three things that didn't fix it
+## Two things I tried first
 
 **Make each node smaller.** `LazyNode` is the most numerous allocation in the program, so I reordered fields to squeeze out struct padding — 104 bytes down to 96. That's [a whole post of its own](/go-struct-padding-2-percent), and the honest summary is: **1.7%**. Field ordering fixes bytes-per-item. My problem was items.
 
@@ -105,11 +105,7 @@ They were right, and both of my answers had been the same confession: the walk v
 
 It still sits behind a `--resolve-call-graph` flag, off by default, because I set the memory gate before I measured and it failed. Precision is not speed. Quite often it is the opposite: a more accurate answer about more things.
 
-**Wait for the runtime to get faster.** This one is tempting right now, because the runtime *is* getting faster at exactly this kind of heap. Go 1.26 turned on the [Green Tea garbage collector](https://go.dev/blog/greenteagc) by default: it marks and scans small objects in contiguous 8 KiB spans instead of one object at a time, for better memory locality, and the release notes expect a **10–40% cut in GC overhead** for GC-heavy programs. Go 1.27 [added size-specialized allocation routines](https://go.dev/doc/go1.27) — small allocations under 80 bytes get up to 30% cheaper, ~1% overall in allocation-heavy programs, for about 60 KB of extra binary.
-
-Both are real, and a tree of millions of 96-byte nodes is squarely the workload Green Tea is for (`LazyNode` misses the 1.27 sub-80-byte fast path by two words). I haven't measured apispec under Go 1.27 yet — that experiment is running as I write this — so those numbers are the release notes' claims, not mine. Here is why I don't expect them to change the conclusion. But I had already measured what the collector could give me, generating apispec's spec from its own repo: at GOGC 100, 300 and 600 the run took 13.7s, 13.7s and 14.1s — flat — while peak RSS climbed from 1.35 GB to 1.80 GB. The heap wasn't churning; it was *live*, so there was nothing for collection tuning to trade. A 10–40% cut in the GC's share doesn't answer a walk that visits 68 nodes for every one it needs. The runtime makes each node cheaper. It cannot make 7.1 million nodes into 405 thousand.
-
-One attempt bought 2%. One made it worse and added a class of bug I'd have to defend. One was never going to arrive at the right axis. What was left was the option issue #20 had pointed at all along: don't build the nodes at all.
+One attempt bought 2%. One made it worse and added a class of bug I'd have to defend. What was left was the option issue #20 had pointed at all along: don't build the nodes at all.
 
 ## The property that makes skipping safe
 
@@ -322,6 +318,14 @@ paths:
 The nine helpers don't appear, because they never could. What changed is that the tool no longer pays to find that out.
 
 That fixture is also the regression guard ([PR #348](https://github.com/ehabterra/apispec/pull/348)): its output is identical with and without pruning, so it's a change detector rather than a test of the speedup. If a future edit to the predicate ever eats a route, it fails loudly. And the prune has an off switch that costs nothing — a nil predicate is the default, and `canReachMatch` then answers `true` unconditionally, so anything wanting the full tree (the diagram server, which never runs the extractor) is untouched.
+
+## The experiment still running: Go 1.27
+
+There's one lever I haven't pulled yet, and I want to be upfront that it's unmeasured — I'm rebuilding with it as I write this.
+
+The Go runtime has been getting faster at exactly this kind of heap. Go 1.26 turned on the [Green Tea garbage collector](https://go.dev/blog/greenteagc) by default: it marks and scans small objects in contiguous 8 KiB spans instead of one object at a time, for better memory locality, and the release notes expect a **10–40% cut in GC overhead** for GC-heavy programs. Go 1.27 [added size-specialized allocation routines](https://go.dev/doc/go1.27) — small allocations under 80 bytes get up to 30% cheaper, ~1% overall in allocation-heavy programs, for about 60 KB of extra binary. A tree of millions of 96-byte nodes is squarely the workload Green Tea is aimed at, though `LazyNode` misses the 1.27 sub-80-byte fast path by two words.
+
+Those numbers are the release notes' claims, not mine, which is why they sit here at the end rather than in the results. But I can already say why I expect a modest answer: back before pruning, I measured what the collector had to give on apispec's own repo, and at GOGC 100, 300 and 600 the run took 13.7s, 13.7s and 14.1s — flat — while peak RSS climbed from 1.35 GB to 1.80 GB. The heap wasn't churning; it was *live*, so there was little for collection to trade. The runtime makes each node cheaper; it took the prune to make 7.1 million nodes into 405 thousand. A constant-factor gift on top of that, I'll happily take — and measure.
 
 ## What this taught me
 
