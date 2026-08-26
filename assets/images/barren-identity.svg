@@ -20,14 +20,16 @@
   <rect x="186" y="56" width="104" height="26" rx="6" fill="#171a22" stroke="#3a3f4c"/>
   <text class="code" x="197" y="73" font-size="10.5" fill="#b6b5b0">listOrders</text>
 
-  <!-- many paths: each route reaches each copy -->
+  <!-- one parent per copy: a copy IS a path -->
   <g stroke="#5a6070" stroke-width="1.1" fill="none" marker-end="url(#gi)">
-    <path d="M78,82 C70,104 70,112 72,128"/>
-    <path d="M96,82 C120,104 142,112 158,128"/>
-    <path d="M112,82 C170,106 226,114 248,128"/>
-    <path d="M226,82 C160,108 100,114 82,128"/>
-    <path d="M238,82 C222,106 194,114 176,128"/>
-    <path d="M252,82 C258,104 260,112 258,128"/>
+    <path d="M76,82 C70,104 70,112 72,128"/>
+    <path d="M100,82 C126,104 152,112 166,128"/>
+    <path d="M238,82 C250,104 258,112 262,128"/>
+  </g>
+  <g class="ui" font-size="8.5" fill="#6f6f79">
+    <text x="46" y="112">path 1</text>
+    <text x="128" y="106">path 2</text>
+    <text x="264" y="112">path 3</text>
   </g>
 
   <g>
@@ -58,12 +60,10 @@
   <rect x="514" y="56" width="104" height="26" rx="6" fill="#171a22" stroke="#3a3f4c"/>
   <text class="code" x="525" y="73" font-size="10.5" fill="#b6b5b0">listOrders</text>
 
-  <!-- all paths converge on the one node -->
+  <!-- every path converges on the one node -->
   <g stroke="#5a6070" stroke-width="1.1" fill="none" marker-end="url(#gi)">
-    <path d="M410,82 C420,104 434,116 448,128"/>
-    <path d="M430,82 C444,102 456,114 464,128"/>
-    <path d="M572,82 C560,104 546,116 532,128"/>
-    <path d="M556,82 C540,102 528,114 518,128"/>
+    <path d="M420,82 C440,104 462,116 476,128"/>
+    <path d="M564,82 C546,104 524,116 510,128"/>
   </g>
 
   <rect x="444" y="130" width="96" height="28" rx="6" fill="#171a22" stroke="#34c3e6"/>
