@@ -323,11 +323,7 @@ That fixture is also the regression guard ([PR #348](https://github.com/ehabterr
 
 ## Where the prune runs out
 
-The honest sequel, before the lessons. After shipping this I pointed the tool at [gitea](https://github.com/go-gitea/gitea) — 374 packages, 82,125 call edges — and measured again ([issue #389](https://github.com/ehabterra/apispec/issues/389)). The walk still materialises **15.7 million nodes**: 88.6 copies per (call, route) pair, with 5.7% of them consulted.
-
-The prune is sound there too — it just stops *biting*. gitea routes every JSON decode through its own `modules/json` wrapper, so one genuine `json.Unmarshal` in one utility package is reachable from essentially everything, and "can this subtree reach a match?" becomes true almost everywhere. On a big enough codebase the predicate degenerates to *keep everything*.
-
-The barren subtrees were the class you could remove for free. What's left is duplication of *useful* subtrees, and every cheaper collapse I've measured since pays in silently dropped responses — a status write and the body written after it are paired by the path that reaches them, so cutting the copies cuts the evidence. Making that pairing path-free is the open work in #389, and a post of its own.
+One honest limit before the lessons: on a big enough codebase, the prune saturates. Pointed at [gitea](https://github.com/go-gitea/gitea) — 374 packages, 82,125 call edges — the walk still builds 15.7 million nodes ([issue #389](https://github.com/ehabterra/apispec/issues/389)), because gitea funnels every JSON decode through its own `modules/json` wrapper, so nearly every subtree genuinely *can* reach a match and the predicate degenerates to keep-everything. The barren class was the part you could remove for free; what's left is duplication of *useful* subtrees, and cutting those copies silently drops responses — a status write and its body are paired by the path that reaches them. Making that pairing path-free is #389, and a post of its own.
 
 ## The runtime experiment, measured
 
