@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 310" width="660" height="310" role="img" aria-labelledby="t2 d2">
+  <title id="t2">Asking per copy versus asking per function</title>
+  <desc id="d2">Both panels show the same two routes reaching the same helper. In the tree, normalize exists once per path and each copy is asked whether anything below it matches. In the call graph, normalize is one node, asked once, and the cached answer serves every path.</desc>
+  <defs>
+    <marker id="gi" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5a6070"/></marker>
+    <style>
+      .code { font-family: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace; }
+      .ui   { font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="660" height="310" rx="12" fill="#0f1117" stroke="#232631"/>
+
+  <!-- LEFT: the tree -->
+  <rect x="16" y="18" width="300" height="244" rx="10" fill="#131519" stroke="#3a3f4c" stroke-dasharray="5 4"/>
+  <text class="ui" x="32" y="42" font-size="12.5" font-weight="600" fill="#eeede8">The tree: one copy per path</text>
+
+  <rect x="34" y="56" width="112" height="26" rx="6" fill="#171a22" stroke="#3a3f4c"/>
+  <text class="code" x="45" y="73" font-size="10.5" fill="#b6b5b0">createOrder</text>
+  <rect x="186" y="56" width="104" height="26" rx="6" fill="#171a22" stroke="#3a3f4c"/>
+  <text class="code" x="197" y="73" font-size="10.5" fill="#b6b5b0">listOrders</text>
+
+  <!-- one parent per copy: a copy IS a path -->
+  <g stroke="#5a6070" stroke-width="1.1" fill="none" marker-end="url(#gi)">
+    <path d="M76,82 C70,104 70,112 72,128"/>
+    <path d="M100,82 C126,104 152,112 166,128"/>
+    <path d="M238,82 C250,104 258,112 262,128"/>
+  </g>
+  <g class="ui" font-size="8.5" fill="#6f6f79">
+    <text x="46" y="112">path 1</text>
+    <text x="128" y="106">path 2</text>
+    <text x="264" y="112">path 3</text>
+  </g>
+
+  <g>
+    <rect x="30" y="130" width="88" height="26" rx="6" fill="#171a22" stroke="#3a3f4c"/>
+    <text class="code" x="39" y="147" font-size="10.5" fill="#a0a6b2">normalize</text>
+    <text class="ui" x="104" y="147" font-size="11" fill="#e8a25c">?</text>
+
+    <rect x="126" y="130" width="88" height="26" rx="6" fill="#171a22" stroke="#3a3f4c"/>
+    <text class="code" x="135" y="147" font-size="10.5" fill="#a0a6b2">normalize</text>
+    <text class="ui" x="200" y="147" font-size="11" fill="#e8a25c">?</text>
+
+    <rect x="222" y="130" width="88" height="26" rx="6" fill="#171a22" stroke="#3a3f4c"/>
+    <text class="code" x="231" y="147" font-size="10.5" fill="#a0a6b2">normalize</text>
+    <text class="ui" x="296" y="147" font-size="11" fill="#e8a25c">?</text>
+  </g>
+  <text class="ui" x="126" y="174" font-size="10.5" fill="#6f6f79">… ×551 more copies, one per path</text>
+
+  <text class="ui" x="32" y="204" font-size="10.5" fill="#8a94a6">Every copy gets its own</text>
+  <text class="ui" x="32" y="220" font-size="10.5" fill="#8a94a6">“anything below you match?”<tspan fill="#e8a25c"> — same question, every time.</tspan></text>
+  <text class="code" x="32" y="248" font-size="11.5" fill="#e8a25c">7,147,505 questions</text>
+
+  <!-- RIGHT: the graph -->
+  <rect x="344" y="18" width="300" height="244" rx="10" fill="#101c26" stroke="#34c3e6"/>
+  <text class="ui" x="360" y="42" font-size="12.5" font-weight="600" fill="#eeede8">The call graph: one node per function</text>
+
+  <rect x="362" y="56" width="112" height="26" rx="6" fill="#171a22" stroke="#3a3f4c"/>
+  <text class="code" x="373" y="73" font-size="10.5" fill="#b6b5b0">createOrder</text>
+  <rect x="514" y="56" width="104" height="26" rx="6" fill="#171a22" stroke="#3a3f4c"/>
+  <text class="code" x="525" y="73" font-size="10.5" fill="#b6b5b0">listOrders</text>
+
+  <!-- every path converges on the one node -->
+  <g stroke="#5a6070" stroke-width="1.1" fill="none" marker-end="url(#gi)">
+    <path d="M420,82 C440,104 462,116 476,128"/>
+    <path d="M564,82 C546,104 524,116 510,128"/>
+  </g>
+
+  <rect x="444" y="130" width="96" height="28" rx="6" fill="#171a22" stroke="#34c3e6"/>
+  <text class="code" x="456" y="148" font-size="11" fill="#eeede8">normalize</text>
+
+  <text class="ui" x="452" y="176" font-size="10.5" fill="#e8a25c">?</text>
+  <text class="ui" x="464" y="176" font-size="10.5" fill="#8a94a6">→</text>
+  <text class="code" x="480" y="176" font-size="10.5" fill="#4ec9a0">no</text>
+  <text class="ui" x="500" y="176" font-size="10" fill="#6f6f79">(cached)</text>
+
+  <text class="ui" x="360" y="204" font-size="10.5" fill="#8a94a6">Asked <tspan fill="#eeede8" font-weight="600">once</tspan>. The answer can't depend on the</text>
+  <text class="ui" x="360" y="220" font-size="10.5" fill="#8a94a6">path, so every path reuses it.</text>
+  <text class="code" x="360" y="248" font-size="11.5" fill="#4ec9a0">12,882 questions</text>
+
+  <text class="ui" x="16" y="290" font-size="11" fill="#b6b5b0">Same routes, same helper, same answer — asked 555× less. And a “no” here skips the whole subtree.</text>
+</svg>

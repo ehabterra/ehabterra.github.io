@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 372" width="660" height="372" role="img" aria-labelledby="t3 d3">
+  <title id="t3">The same cyclic graph, solved forwards and backwards</title>
+  <desc id="d3">Both panels show the same graph: x calls y, y calls x back, and x calls a matching function. Forwards, a memoised DFS asks y about x while x is still in progress, caches a wrong no for y, and the memo is poisoned. Backwards, the match seeds the answer and reachability spreads to callers — x, then y — with no cycle case at all.</desc>
+  <defs>
+    <marker id="gc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5a6070"/></marker>
+    <marker id="gr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#4ec9a0"/></marker>
+    <style>
+      .code { font-family: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace; }
+      .ui   { font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="660" height="372" rx="12" fill="#0f1117" stroke="#232631"/>
+
+  <!-- ============ LEFT: forward ============ -->
+  <rect x="16" y="18" width="300" height="304" rx="10" fill="#1a1214" stroke="#5a3437"/>
+  <text class="ui" x="32" y="42" font-size="12" font-weight="600" fill="#f0716a">Forwards + memo: caches a wrong “no”</text>
+
+  <!-- call edges (identical in both panels) -->
+  <g fill="none" stroke="#5a6070" stroke-width="1.3" marker-end="url(#gc)">
+    <path d="M158,100 H206"/>
+    <path d="M130,118 V166"/>
+  </g>
+  <path d="M102,184 C64,184 64,100 98,100" fill="none" stroke="#5a6070" stroke-width="1.3" marker-end="url(#gc)"/>
+  <text class="ui" x="41" y="142" font-size="9.5" fill="#8a94a6" transform="rotate(-90 41 142)" text-anchor="middle">y calls x</text>
+
+  <!-- nodes -->
+  <rect x="102" y="84" width="56" height="32" rx="7" fill="#171a22" stroke="#3a3f4c"/>
+  <text class="code" x="126" y="105" font-size="12" fill="#eeede8">x</text>
+  <rect x="206" y="84" width="80" height="32" rx="7" fill="#10241c" stroke="#4ec9a0"/>
+  <text class="code" x="226" y="105" font-size="11.5" fill="#eeede8">match</text>
+  <rect x="102" y="168" width="56" height="32" rx="7" fill="#171a22" stroke="#3a3f4c"/>
+  <text class="code" x="126" y="189" font-size="12" fill="#eeede8">y</text>
+
+  <!-- step badges -->
+  <g class="ui" font-size="10" font-weight="600">
+    <circle cx="102" cy="84" r="9" fill="#f0716a"/><text x="99" y="88" fill="#1a1214">1</text>
+    <circle cx="102" cy="168" r="9" fill="#f0716a"/><text x="99" y="172" fill="#1a1214">2</text>
+    <circle cx="62" cy="140" r="9" fill="#f0716a"/><text x="59" y="144" fill="#1a1214">3</text>
+  </g>
+
+  <g class="ui" font-size="10.5" fill="#b6b5b0">
+    <text x="32" y="228"><tspan font-weight="600" fill="#eeede8">1</tspan>  can x reach a match? descend.</text>
+    <text x="32" y="246"><tspan font-weight="600" fill="#eeede8">2</tspan>  can y? its only child is x…</text>
+    <text x="32" y="264"><tspan font-weight="600" fill="#eeede8">3</tspan>  …which is still <tspan font-style="italic">in progress</tspan> → guard says no</text>
+  </g>
+  <text class="code" x="32" y="290" font-size="11" fill="#f0716a">memo[y] = false   ← the lie sticks</text>
+  <text class="ui" x="32" y="310" font-size="10.5" fill="#e8a25c">yet y → x → match is a real path.</text>
+
+  <!-- ============ RIGHT: backwards ============ -->
+  <rect x="344" y="18" width="300" height="304" rx="10" fill="#101c26" stroke="#34c3e6"/>
+  <text class="ui" x="360" y="42" font-size="12" font-weight="600" fill="#4ec9a0">Backwards from the match: no cycle case</text>
+
+  <!-- identical call edges -->
+  <g fill="none" stroke="#5a6070" stroke-width="1.3" marker-end="url(#gc)">
+    <path d="M486,100 H534"/>
+    <path d="M458,118 V166"/>
+  </g>
+  <path d="M430,184 C392,184 392,100 426,100" fill="none" stroke="#5a6070" stroke-width="1.3" marker-end="url(#gc)"/>
+  <text class="ui" x="369" y="142" font-size="9.5" fill="#8a94a6" transform="rotate(-90 369 142)" text-anchor="middle">y calls x</text>
+
+  <!-- propagation, in green, opposite to the call arrows -->
+  <g fill="none" stroke="#4ec9a0" stroke-width="1.8" marker-end="url(#gr)">
+    <path d="M534,110 H490"/>
+    <path d="M440,116 C420,132 420,152 440,168"/>
+  </g>
+
+  <!-- nodes: all reachable -->
+  <rect x="430" y="84" width="56" height="32" rx="7" fill="#10241c" stroke="#4ec9a0"/>
+  <text class="code" x="454" y="105" font-size="12" fill="#eeede8">x</text>
+  <rect x="534" y="84" width="80" height="32" rx="7" fill="#10241c" stroke="#4ec9a0" stroke-width="1.6"/>
+  <text class="code" x="554" y="105" font-size="11.5" fill="#eeede8">match</text>
+  <rect x="430" y="168" width="56" height="32" rx="7" fill="#10241c" stroke="#4ec9a0"/>
+  <text class="code" x="454" y="189" font-size="12" fill="#eeede8">y</text>
+
+  <g class="ui" font-size="10" font-weight="600">
+    <circle cx="614" cy="84" r="9" fill="#4ec9a0"/><text x="611" y="88" fill="#101c26">1</text>
+    <circle cx="510" cy="110" r="9" fill="#4ec9a0"/><text x="507" y="114" fill="#101c26">2</text>
+    <circle cx="427" cy="142" r="9" fill="#4ec9a0"/><text x="424" y="146" fill="#101c26">3</text>
+  </g>
+
+  <g class="ui" font-size="10.5" fill="#b6b5b0">
+    <text x="360" y="228"><tspan font-weight="600" fill="#eeede8">1</tspan>  seed: match reaches a match.</text>
+    <text x="360" y="246"><tspan font-weight="600" fill="#eeede8">2</tspan>  x calls it → mark x.</text>
+    <text x="360" y="264"><tspan font-weight="600" fill="#eeede8">3</tspan>  y calls x → mark y. Nothing new → stop.</text>
+  </g>
+  <text class="code" x="360" y="290" font-size="11" fill="#4ec9a0">reach = {match, x, y}   ✓</text>
+  <text class="ui" x="360" y="310" font-size="10.5" fill="#8a94a6">already-marked is just skipped — cycles vanish.</text>
+
+  <!-- legend -->
+  <g class="ui" font-size="10" fill="#8a94a6">
+    <line x1="20" y1="348" x2="52" y2="348" stroke="#5a6070" stroke-width="1.3" marker-end="url(#gc)"/>
+    <text x="60" y="352">call (same graph on both sides)</text>
+    <line x1="270" y1="348" x2="302" y2="348" stroke="#4ec9a0" stroke-width="1.8" marker-end="url(#gr)"/>
+    <text x="310" y="352">reachability spreading to callers — the call arrows, walked in reverse</text>
+  </g>
+</svg>

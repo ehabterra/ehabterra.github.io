@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 390" width="660" height="390" role="img" aria-labelledby="t1 d1">
+  <title id="t1">What apispec walks for one route</title>
+  <desc id="d1">A route registration leads to a handler, which leads to three calls that describe the API and to a dashed cluster of nine helper functions that describe nothing. The helpers are pruned; everything that can reach a match is kept.</desc>
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#4a5060"/>
+    </marker>
+    <style>
+      .code { font-family: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace; }
+      .ui   { font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="660" height="390" rx="12" fill="#0f1117" stroke="#232631"/>
+  <text class="ui" x="18" y="28" font-size="12.5" font-weight="600" fill="#b6b5b0">One route, one handler — and everything under it</text>
+
+  <g fill="none" stroke="#4a5060" stroke-width="1.3" marker-end="url(#ar)">
+    <path d="M186,180 H208"/>
+    <path d="M344,180 H358 V74  H366"/>
+    <path d="M344,180 H358 V124 H366"/>
+    <path d="M344,180 H358 V174 H366"/>
+    <path d="M344,180 H358 V264 H366"/>
+  </g>
+
+  <rect x="16" y="152" width="170" height="56" rx="8" fill="#10241c" stroke="#4ec9a0" stroke-width="1.3"/>
+  <text class="code" x="28" y="176" font-size="11.5" fill="#eeede8">mux.HandleFunc(</text>
+  <text class="code" x="28" y="194" font-size="11.5" fill="#eeede8">  "POST /orders", …)</text>
+
+  <rect x="214" y="152" width="130" height="56" rx="8" fill="#101c26" stroke="#34c3e6" stroke-width="1.3"/>
+  <text class="code" x="226" y="176" font-size="12" fill="#eeede8">createOrder</text>
+  <text class="ui"   x="226" y="194" font-size="10" fill="#8a94a6">the handler body</text>
+
+  <g>
+    <rect x="372" y="54" width="272" height="40" rx="8" fill="#10241c" stroke="#4ec9a0" stroke-width="1.3"/>
+    <text class="code" x="386" y="79" font-size="12" fill="#eeede8">Decode(&#38;req)</text>
+    <text class="ui" x="630" y="79" font-size="10.5" fill="#4ec9a0" text-anchor="end">request body</text>
+
+    <rect x="372" y="104" width="272" height="40" rx="8" fill="#10241c" stroke="#4ec9a0" stroke-width="1.3"/>
+    <text class="code" x="386" y="129" font-size="12" fill="#eeede8">WriteHeader(201)</text>
+    <text class="ui" x="630" y="129" font-size="10.5" fill="#4ec9a0" text-anchor="end">status</text>
+
+    <rect x="372" y="154" width="272" height="40" rx="8" fill="#10241c" stroke="#4ec9a0" stroke-width="1.3"/>
+    <text class="code" x="386" y="179" font-size="12" fill="#eeede8">Encode(order)</text>
+    <text class="ui" x="630" y="179" font-size="10.5" fill="#4ec9a0" text-anchor="end">response schema</text>
+  </g>
+
+  <rect x="372" y="204" width="272" height="132" rx="10" fill="#131519" stroke="#3a3f4c" stroke-width="1.2" stroke-dasharray="5 4"/>
+  <text class="ui" x="386" y="224" font-size="10.5" fill="#8a94a6">the helper layer — 9 functions</text>
+  <g class="code" font-size="10.5" fill="#7c8494">
+    <text x="386" y="248">normalize → pad → trim → classify</text>
+    <text x="386" y="266">classify → score → weigh</text>
+    <text x="386" y="284">weigh → normalize<tspan dx="10" fill="#e8a25c">(it loops)</tspan></text>
+    <text x="386" y="302">total → price → surcharge</text>
+  </g>
+  <text class="ui" x="386" y="324" font-size="10.5" fill="#e8a25c">no HTTP, no JSON, no status codes</text>
+
+  <g class="ui" font-size="10.5" fill="#b6b5b0">
+    <rect x="16" y="352" width="12" height="12" rx="3" fill="#10241c" stroke="#4ec9a0" stroke-width="1.2"/>
+    <text x="35" y="362">a matcher accepts this call</text>
+    <rect x="196" y="352" width="12" height="12" rx="3" fill="#101c26" stroke="#34c3e6" stroke-width="1.2"/>
+    <text x="215" y="362">kept — can reach a match</text>
+    <rect x="374" y="352" width="12" height="12" rx="3" fill="#131519" stroke="#3a3f4c" stroke-width="1.2" stroke-dasharray="3 3"/>
+    <text x="393" y="362">pruned — nothing below</text>
+  </g>
+</svg>
