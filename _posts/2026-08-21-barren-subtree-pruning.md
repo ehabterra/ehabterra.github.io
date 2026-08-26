@@ -128,9 +128,9 @@ Which means the question "is there anything under this function that a matcher w
 
 So I stopped asking it per node and started asking it per function: once over the ~12,900 distinct calls, instead of 7.1 million times over their copies.
 
-![Left: the same helper stacked hundreds of times, each asked the same question. Right: one copy, asked once](/assets/images/barren-identity.svg)
+![Both panels show the same two routes reaching normalize. In the tree, each of 554 copies is asked separately; in the call graph, one node is asked once and the answer is cached](/assets/images/barren-identity.svg)
 
-Three orders of magnitude fewer questions, before a single node is saved. If the move feels familiar, it's the one [hash consing](https://en.wikipedia.org/wiki/Hash_consing) makes: one answer per distinct content, not one per occurrence.
+Roughly 555× fewer questions, before a single node is saved. If the move feels familiar, it's the one [hash consing](https://en.wikipedia.org/wiki/Hash_consing) makes: one answer per distinct content, not one per occurrence.
 
 ## The predicate is "can reach", not "matches"
 
@@ -194,7 +194,7 @@ func canReach(f fn, memo, onPath map[fn]bool) bool {
 }
 ```
 
-Correct on a DAG. Wrong on a call graph, which has cycles all over it — `weigh` calls `normalize` right there in the fixture.
+Correct on a [DAG](https://en.wikipedia.org/wiki/Directed_acyclic_graph) — memoisation over an acyclic graph is ordinary dynamic programming. Wrong on a call graph, which has [cycles](https://en.wikipedia.org/wiki/Cycle_(graph_theory)) all over it — `weigh` calls `normalize` right there in the fixture.
 
 Take `x → y`, `y → x`, and `x → match`. The walk enters `x`, recurses into `y`, and `y` asks about `x`. `x` is still on the path, so the guard answers `false`. Fine as a guard; fatal as a *cached* answer. `y` records `false` permanently, even though `y → x → match` is a perfectly good path. Fixing it forwards means condensing the strongly connected components first ([Tarjan's](https://en.wikipedia.org/wiki/Tarjan%27s_strongly_connected_components_algorithm) territory) or repeating the whole pass until it settles.
 
@@ -204,7 +204,7 @@ So I ran it backwards:
 2. Seed the reachable set with every function whose own call matches.
 3. Pop a reachable function, mark its parents reachable, push them. Repeat until the worklist is empty.
 
-![Forward DFS caching a wrong false on a back edge, versus seeding from the match and walking reverse edges](/assets/images/barren-backwards.svg)
+![The same cyclic graph solved twice. Forwards, a memoised DFS asks y about x while x is still in progress and caches a wrong no. Backwards, the match seeds reachability, which spreads to callers x then y with no cycle case](/assets/images/barren-backwards.svg)
 
 That's the whole thing (real names shortened for the page):
 
@@ -355,10 +355,16 @@ About 1.5% faster — inside the noise — and peak RSS *higher*, not lower. Whi
 
 ## Further reading
 
-- [Data-flow analysis](https://en.wikipedia.org/wiki/Data-flow_analysis) and [live-variable analysis](https://en.wikipedia.org/wiki/Live-variable_analysis) — the general frame. If you've ever written liveness, you've already written this post's core loop.
-- [Program slicing](https://en.wikipedia.org/wiki/Program_slicing) — Weiser's 1981 idea; "keep what can reach the goal" becomes a whole field once the criterion gets richer than mine.
-- [In Defense of Soundiness: A Manifesto](https://soundiness.org) — short and honest about the fact that every real analyser over-approximates somewhere, and that the sin is not saying where.
-- [golang.org/x/tools/go/callgraph](https://pkg.go.dev/golang.org/x/tools/go/callgraph) — the Go implementations of CHA, RTA and VTA, if you want the call graph I measured in PR #250.
+Every technique this post used or brushed against, with the reference I'd start from:
+
+- **DAGs versus cycles** — the whole cycle trap in two links: memoisation is safe over a [directed acyclic graph](https://en.wikipedia.org/wiki/Directed_acyclic_graph) and unsafe over a [cycle](https://en.wikipedia.org/wiki/Cycle_(graph_theory)). Collapsing [strongly connected components](https://en.wikipedia.org/wiki/Strongly_connected_component) gets your DAG back, and [Tarjan's algorithm](https://en.wikipedia.org/wiki/Tarjan%27s_strongly_connected_components_algorithm) ("Depth-first search and linear graph algorithms", [SIAM J. Computing 1972](https://doi.org/10.1137/0201010)) does it in a single DFS.
+- **Worklist fixpoints** — the propagate-until-nothing-changes loop goes back to Kildall, ["A Unified Approach to Global Program Optimization"](https://doi.org/10.1145/512927.512945) (POPL 1973); the theory underneath is the [least fixed point](https://en.wikipedia.org/wiki/Least_fixed_point) of a monotone function ([Knaster–Tarski](https://en.wikipedia.org/wiki/Knaster%E2%80%93Tarski_theorem)).
+- **Backwards dataflow** — [data-flow analysis](https://en.wikipedia.org/wiki/Data-flow_analysis) in general and [live-variable analysis](https://en.wikipedia.org/wiki/Live-variable_analysis) in particular: if you've written liveness, you've written this post's core loop. Chapter 9 of the [Dragon Book](https://en.wikipedia.org/wiki/Compilers:_Principles,_Techniques,_and_Tools) is the standard treatment.
+- **Keep what can reach the goal** — the mark phase of [tracing garbage collection](https://en.wikipedia.org/wiki/Tracing_garbage_collection) (the book is Jones, Hosking & Moss, [*The Garbage Collection Handbook*](https://gchandbook.org)), and [program slicing](https://en.wikipedia.org/wiki/Program_slicing) (Weiser, ["Program Slicing"](https://doi.org/10.1109/TSE.1984.5010248), ICSE 1981 / TSE 1984).
+- **One answer per distinct content** — [hash consing](https://en.wikipedia.org/wiki/Hash_consing), the persistent cousin of plain [memoization](https://en.wikipedia.org/wiki/Memoization).
+- **Call-graph construction** (the PR #250 detour) — the precision ladder runs CHA (Dean, Grove & Chambers, [ECOOP 1995](https://doi.org/10.1007/3-540-49538-X_5)) → RTA (Bacon & Sweeney, [OOPSLA 1996](https://doi.org/10.1145/236337.236371)) → VTA (Sundaresan et al., [OOPSLA 2000](https://doi.org/10.1145/353171.353189)); Tip & Palsberg ([OOPSLA 2000](https://doi.org/10.1145/353171.353190)) compare the ladder end to end. [golang.org/x/tools/go/callgraph](https://pkg.go.dev/golang.org/x/tools/go/callgraph) has the Go implementations, built on [SSA form](https://en.wikipedia.org/wiki/Static_single-assignment_form) (Cytron et al., [TOPLAS 1991](https://doi.org/10.1145/115372.115320)).
+- **Honest over-approximation** — [In Defense of Soundiness: A Manifesto](https://soundiness.org) (Livshits et al., CACM 2015): every real analyser over-approximates somewhere, and the sin is not saying where.
+- **The runtime side** — [the Green Tea garbage collector](https://go.dev/blog/greenteagc), and the [Go 1.26](https://go.dev/doc/go1.26) / [Go 1.27](https://go.dev/doc/go1.27) release notes the measurements tested.
 
 ---
 
