@@ -319,13 +319,29 @@ The nine helpers don't appear, because they never could. What changed is that th
 
 That fixture is also the regression guard ([PR #348](https://github.com/ehabterra/apispec/pull/348)): its output is identical with and without pruning, so it's a change detector rather than a test of the speedup. If a future edit to the predicate ever eats a route, it fails loudly. And the prune has an off switch that costs nothing — a nil predicate is the default, and `canReachMatch` then answers `true` unconditionally, so anything wanting the full tree (the diagram server, which never runs the extractor) is untouched.
 
-## The experiment still running: Go 1.27
+## Where the prune runs out
 
-There's one lever I haven't pulled yet, and I want to be upfront that it's unmeasured — I'm rebuilding with it as I write this.
+The honest sequel, before the lessons. After shipping this I pointed the tool at [gitea](https://github.com/go-gitea/gitea) — 374 packages, 82,125 call edges, 1,265 route subtrees — and measured again ([issue #389](https://github.com/ehabterra/apispec/issues/389)). The walk still materialises **15.7 million nodes**: 547 copies per distinct call, 88.6 per (call, route) pair, with 5.7% of them consulted.
 
-The Go runtime has been getting faster at exactly this kind of heap. Go 1.26 turned on the [Green Tea garbage collector](https://go.dev/blog/greenteagc) by default: it marks and scans small objects in contiguous 8 KiB spans instead of one object at a time, for better memory locality, and the release notes expect a **10–40% cut in GC overhead** for GC-heavy programs. Go 1.27 [added size-specialized allocation routines](https://go.dev/doc/go1.27) — small allocations under 80 bytes get up to 30% cheaper, ~1% overall in allocation-heavy programs, for about 60 KB of extra binary. A tree of millions of 96-byte nodes is squarely the workload Green Tea is aimed at, though `LazyNode` misses the 1.27 sub-80-byte fast path by two words.
+The prune is sound there too — it just stops *biting*. gitea routes every JSON decode through its own `modules/json` wrapper, so one genuine `json.Unmarshal` in one utility package is reachable from essentially everything, and "can this subtree reach a match?" becomes true almost everywhere. I recomputed the reach index per matcher family to check: param seeds alone keep 92.4% of all copies alive, yet are the *sole* justification for only 6.8% — meaning even deleting an entire matcher family would prune almost nothing, because nearly every node can also reach a response-ish call. On a big enough codebase the predicate degenerates to *keep everything*.
 
-Those numbers are the release notes' claims, not mine, which is why they sit here at the end rather than in the results. But I can already say why I expect a modest answer: back before pruning, I measured what the collector had to give on apispec's own repo, and at GOGC 100, 300 and 600 the run took 13.7s, 13.7s and 14.1s — flat — while peak RSS climbed from 1.35 GB to 1.80 GB. The heap wasn't churning; it was *live*, so there was little for collection to trade. The runtime makes each node cheaper; it took the prune to make 7.1 million nodes into 405 thousand. A constant-factor gift on top of that, I'll happily take — and measure.
+And the remaining copies aren't merely slow — the budget arithmetic from earlier runs both ways. Clipping the instance cap from 100 to 10 on gitea finds **18 more routes** (900 → 918 paths) *and loses response bodies*, because a status write and the body written after it are currently paired by the path that reaches them: cut the copies and the pairing loses its evidence. The barren subtrees were the class you could remove for free. What's left is duplication of *useful* subtrees, and that needs a different idea — that's what #389 is working through.
+
+## The runtime experiment, measured
+
+The first version of this post said this part was unmeasured. It isn't anymore, and the measurement moved to gitea with everything else.
+
+The claims were worth testing. Go 1.26 turned on the [Green Tea garbage collector](https://go.dev/blog/greenteagc) by default — it marks and scans small objects in contiguous 8 KiB spans instead of one at a time, and the release notes expect a **10–40% cut in GC overhead** for GC-heavy programs. Go 1.27 [added size-specialized allocation](https://go.dev/doc/go1.27) for objects under 80 bytes, up to 30% cheaper. A tree of millions of small nodes is squarely Green Tea's target workload — though in a small irony, `LazyNode` has since been squeezed to exactly 80 bytes, missing the sub-80-byte fast path by nothing at all.
+
+Same commit, both toolchains, runs interleaved, on gitea:
+
+```
+toolchain    mapping (run 1 / run 2)    peak RSS
+go1.26.0     1m35.8s / 1m38.1s          4.50 / 5.13 GB
+go1.27.0     1m34.9s / 1m35.7s          5.01 / 5.71 GB
+```
+
+About 1.5% faster — inside the noise — and peak RSS *higher*, not lower. Which agrees with everything GC tuning had already said: at GOGC 100, 300 and 600 the run was flat (13.7s / 13.7s / 14.1s) while RSS climbed 1.35 → 1.80 GB, and on the 163-route service `GOGC=off` was actually *slower* (8.3s vs 6.3s). The heap isn't churning; it's **live** — millions of nodes retained at once because each node caches its children for the life of the walk — so there is nothing for a collector to trade. The runtime makes each node cheaper. The lever is, and stays, the node count.
 
 ## What this taught me
 
@@ -337,6 +353,7 @@ Those numbers are the release notes' claims, not mine, which is why they sit her
 - **Say which direction your approximation errs.** Anything the stand-in withholds can only cause keeping, never dropping. If you can't finish that sentence, you're shipping a heuristic that loses data on a delay.
 - **On a cyclic graph, seed from the goal and go backwards.** The forward memoised DFS was my first draft, and its premature cached negatives would have been the quiet kind of production bug.
 - **Under a budget, saved work is found output.** That's where the extra spec content came from, and I didn't see it coming.
+- **Every fix has a scale where it stops.** On gitea, "can reach a match" is true nearly everywhere and the prune degenerates to keep-everything. Measuring where your own fix saturates is the first step of the next one — #389 is that measurement.
 
 ## Further reading
 
@@ -347,4 +364,4 @@ Those numbers are the release notes' claims, not mine, which is why they sit her
 
 ---
 
-*The implementation is `internal/spec/prune.go` [in the repo](https://github.com/ehabterra/apispec), with the soundness argument in the doc comments — issue #318, PR #348.*
+*The implementation is `internal/spec/prune.go` [in the repo](https://github.com/ehabterra/apispec), with the soundness argument in the doc comments — issue #318, PR #348. The sequel — what's left after the prune, and why it's harder — is [issue #389](https://github.com/ehabterra/apispec/issues/389).*
