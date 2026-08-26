@@ -1,4 +1,5 @@
 .idea
 .DS_Store
 
-_siteassets/images/test/
+_site
+assets/images/test/
