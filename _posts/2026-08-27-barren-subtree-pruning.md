@@ -4,8 +4,8 @@ title: "Pruning: Prove It Can't Matter, Then Skip It"
 date: 2026-08-26
 tags: [GoLang, Go, Performance, Optimization, Graphs, StaticAnalysis, apispec]
 header:
-   teaser: /assets/images/barren-pruning-header.png
-   image: /assets/images/barren-pruning-header.png
+   teaser: /assets/images/apispec-resolution-trace.png
+   image: /assets/images/apispec-resolution-trace.png
 author: Ehab Terra
 permalink: /barren-subtree-pruning
 subtitle: My Go tool built 7.1 million nodes to use 104 thousand. Pruning the subtrees that provably couldn't matter made it 2–11× faster — and the output got more complete, not less
