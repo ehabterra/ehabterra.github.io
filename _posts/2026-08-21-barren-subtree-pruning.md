@@ -1,15 +1,15 @@
 ---
 key: blog
-title: "Seven Million Nodes, and the 1.5% That Mattered"
-date: 2026-08-21
+title: "Prove It Can't Matter, Then Skip It"
+date: 2026-08-26
 tags: [GoLang, Go, Performance, Optimization, Graphs, StaticAnalysis, apispec]
 header:
    teaser: /assets/images/apispec.png
    image: /assets/images/apispec.png
 author: Ehab Terra
 permalink: /barren-subtree-pruning
-subtitle: Struct packing saved 2%. A smarter call graph made it worse. Proving 97.6% of the work could be skipped made it 11× faster
-excerpt: Struct packing saved 2%. A smarter call graph made it worse. Proving 97.6% of the work could be skipped made it 11× faster
+subtitle: My Go tool built 7.1 million nodes to use 104 thousand. Pruning the subtrees that provably couldn't matter made it 2–11× faster — and the output got more complete, not less
+excerpt: My Go tool built 7.1 million nodes to use 104 thousand. Pruning the subtrees that provably couldn't matter made it 2–11× faster — and the output got more complete, not less
 ---
 
 ## The whole problem, in one file
