@@ -1,6 +1,6 @@
 ---
 key: blog
-title: "Prove It Can't Matter, Then Skip It"
+title: "Pruning: Prove It Can't Matter, Then Skip It"
 date: 2026-08-26
 tags: [GoLang, Go, Performance, Optimization, Graphs, StaticAnalysis, apispec]
 header:
