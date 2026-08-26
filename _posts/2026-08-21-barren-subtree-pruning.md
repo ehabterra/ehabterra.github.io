@@ -329,9 +329,7 @@ And the remaining copies aren't merely slow — the budget arithmetic from earli
 
 ## The runtime experiment, measured
 
-The first version of this post said this part was unmeasured. It isn't anymore, and the measurement moved to gitea with everything else.
-
-The claims were worth testing. Go 1.26 turned on the [Green Tea garbage collector](https://go.dev/blog/greenteagc) by default — it marks and scans small objects in contiguous 8 KiB spans instead of one at a time, and the release notes expect a **10–40% cut in GC overhead** for GC-heavy programs. Go 1.27 [added size-specialized allocation](https://go.dev/doc/go1.27) for objects under 80 bytes, up to 30% cheaper. A tree of millions of small nodes is squarely Green Tea's target workload — though in a small irony, `LazyNode` has since been squeezed to exactly 80 bytes, missing the sub-80-byte fast path by nothing at all.
+There was a third tempting non-fix I haven't mentioned: wait for the Go runtime, which has been getting faster at exactly this kind of heap. The claims were worth testing rather than trusting. Go 1.26 turned on the [Green Tea garbage collector](https://go.dev/blog/greenteagc) by default — it marks and scans small objects in contiguous 8 KiB spans instead of one at a time, and the release notes expect a **10–40% cut in GC overhead** for GC-heavy programs. Go 1.27 [added size-specialized allocation](https://go.dev/doc/go1.27) for objects under 80 bytes, up to 30% cheaper. A tree of millions of small nodes is squarely Green Tea's target workload — though in a small irony, `LazyNode` has since been squeezed to exactly 80 bytes, missing the sub-80-byte fast path by nothing at all.
 
 Same commit, both toolchains, runs interleaved, on gitea:
 
