@@ -71,6 +71,8 @@ func b()       { helper() }
 
 `helper` is reachable two ways, so it gets two nodes. Three callers, three nodes. That's per layer, and the layers multiply — a helper five levels down under a mesh of small functions is reached along thousands of distinct paths and rebuilt once for each. `weigh → normalize` closes a loop, and a loop only stops when a budget stops it.
 
+![Left: the call graph, where handler calls a and b and both call one shared helper. Right: the tree the walk builds, with one helper node per path. Below: each shared layer doubles the copies — 1, 2, 4, 8, 16 — measured at 555 copies per function](/assets/images/barren-unfold.svg)
+
 I knew this was wasteful. I did not know how wasteful until I put a counter in. On a 163-route service:
 
 ```
