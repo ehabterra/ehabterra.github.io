@@ -328,7 +328,7 @@ paths:
 
 The nine helpers don't appear, because they never could. What changed is that the tool no longer pays to find that out.
 
-Both pictures below are that same fixture — the one `createOrder` handler from the top of this post — in [apispecui](https://github.com/ehabterra/apispec)'s resolution trace, which will draw a route from either structure. The raw call graph first, every syntactic call out of the handler:
+Both pictures below are that same fixture — the `createOrder` handler behind `POST /orders`, from the top of this post — in [apispecui](https://github.com/ehabterra/apispec)'s resolution trace, which will draw a route from either structure. The raw call graph first, every syntactic call out of the handler:
 
 ![The call graph as apispec records it: createOrder fanning out to json.NewDecoder, Decoder.Decode, json.NewEncoder, Encoder.Encode and http.ResponseWriter, and alongside them normalize, total, pad, trim, price and surcharge, with classify branching on to score and weigh. 15 nodes, 17 edges](/assets/images/barren-trace-call-graph.png)
 
