@@ -350,9 +350,9 @@ The barren class was the part you could remove for free; what's left is duplicat
 
 ## The runtime experiment, measured
 
-With 15.7 million nodes still standing on gitea, the third tempting non-fix comes back into play: wait for the Go runtime, which has been getting faster at exactly this kind of heap. Like the other two, it was worth measuring rather than trusting.
+With 15.7 million nodes still standing on gitea, the third tempting non-fix comes back into play: wait for the Go runtime, which has been getting faster at exactly this kind of heap. Like the other two, it deserved measuring rather than trusting.
 
-Go 1.26 turned on the [Green Tea garbage collector](https://go.dev/blog/greenteagc) by default — it marks and scans small objects in contiguous 8 KiB spans instead of one at a time, and the release notes expect a **10–40% cut in GC overhead** for GC-heavy programs. Go 1.27 [added size-specialized allocation](https://go.dev/doc/go1.27) for objects under 80 bytes, up to 30% cheaper. A tree of millions of small nodes is squarely Green Tea's target workload.
+Go 1.26 turned on the [Green Tea garbage collector](https://go.dev/blog/greenteagc) by default — it marks and scans small objects in contiguous 8 KiB spans instead of one at a time, and the release notes expect a **10–40% cut in GC overhead** for GC-heavy programs. Go 1.27 [added size-specialized allocation](https://go.dev/doc/go1.27) for objects under 80 bytes, up to 30% cheaper. Millions of small nodes on one heap is squarely what both were written for — except that `LazyNode` was exactly 80 bytes at the time, one byte the wrong side of that threshold, so what follows tests Green Tea and not the allocator.
 
 Same commit, both toolchains, runs interleaved, on gitea:
 
@@ -362,11 +362,13 @@ go1.26.0     1m35.8s / 1m38.1s          4.50 / 5.13 GB
 go1.27.0     1m34.9s / 1m35.7s          5.01 / 5.71 GB
 ```
 
-About 1.5% faster — inside the noise — and peak RSS *higher*, not lower. Which agrees with everything GC tuning had already said: at GOGC 100, 300 and 600 the run was flat (13.7s / 13.7s / 14.1s) while RSS climbed 1.35 → 1.80 GB, and on the 163-route service `GOGC=off` was actually *slower* (8.3s vs 6.3s). The heap isn't churning; it's **live** — millions of nodes retained at once because each node caches its children for the life of the walk — so there is nothing for a collector to trade.
+About 1.5% faster — inside the noise — and peak RSS *higher*, not lower.
 
-One caveat that table owes you. `LazyNode` was exactly 80 bytes when I ran it, so it missed 1.27's sub-80-byte path by a single byte and the comparison never tested that half of the release. It is 72 bytes now — interning the node key to an `int32` handle ([PR #418](https://github.com/ehabterra/apispec/pull/418)) took it a size class down — which bought **7.5%** off the mapping stage and **4.4%** off peak RSS, output byte-identical. Third attempt at a smaller item, third result in the same range, and the count sitting exactly where it was: 15.7 million.
+Which agrees with everything GC tuning had already said. At GOGC 100, 300 and 600 the run was flat (13.7s / 13.7s / 14.1s) while RSS climbed 1.35 → 1.80 GB, and on the 163-route service `GOGC=off` was actually *slower* (8.3s vs 6.3s). The heap isn't churning; it's **live** — millions of nodes retained at once, because each node caches its children for the life of the walk. A collector can only trade against garbage, and there isn't any.
 
-The runtime makes each node cheaper. So does a smaller node. The lever is, and stays, the node count.
+So I took the byte off myself. Interning the node key to an `int32` handle ([PR #418](https://github.com/ehabterra/apispec/pull/418)) brought `LazyNode` to 72 bytes — a whole size class down, and on the right side of that threshold at last. It bought **7.5%** off the mapping stage and **4.4%** off peak RSS, output byte-identical.
+
+Three passes at making the item cheaper, then: field ordering, a newer runtime, a smaller key — 1.7%, 1.5%, 7.5%, and the node count sitting exactly where it started at 15.7 million. The runtime makes each node cheaper. So does a smaller node. The lever is, and stays, the count.
 
 ## What this taught me
 
