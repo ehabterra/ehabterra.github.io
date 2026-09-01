@@ -1,7 +1,8 @@
 ---
 key: blog
 title: "Pruning: Prove It Can't Matter, Then Skip It"
-date: 2026-08-26
+date: 2026-08-27
+last_modified_at: 2026-09-01
 tags: [GoLang, Go, Performance, Optimization, Graphs, StaticAnalysis, apispec]
 header:
    teaser: /assets/images/barren-pruning-header.png
@@ -93,9 +94,17 @@ In September 2025 someone opened [issue #20](https://github.com/ehabterra/apispe
 
 I gave them the two answers I had. Lower the caps: `--max-nodes 5000 --max-recursion-depth 3`. And exclude what isn't API code: `--exclude-package "**/internal/**"`. Their reply was one question — if the tool already knows the router, "why would I need to exclude anything?" Shouldn't it just follow the code from the routes and visit only what matters?
 
-They were right, and both of my answers had been the same confession: the walk visits too much, and here are two knobs for rationing it. In fairness to the timeline, that freeze was the tool's first trial at scale — most of the hang was cycle handling, infinite loops in the walk that were hunted down and fixed one by one — and performance improved incrementally with every release after, to the point that those first builds and the current one aren't comparable. But none of that incremental work answered the question itself. The caps bound the waste; the exclude flags hand the *user* the job of pruning — the job the tool exists to do. And when I closed the issue saying the tool now "intelligently follows the code path" with no exclusions needed, that was an overpromise: the loops were fixed and the walk kept getting faster, but "only what matters" stayed hopeful rather than provable for most of a year — and a guess inside a prune is how routes go silently missing. That question was the correct spec for this work. So before the provable version, I reached for the cheaper levers everyone reaches for.
+Both my answers had been the same confession, and they'd caught it: the walk visits too much, and here are two knobs for rationing it. (Most of that particular freeze turned out to be cycle bugs in the walk, hunted down one by one over the releases after; those builds and today's aren't comparable.)
 
-## Two things I tried first
+So I took the job back from them. Within a week `--auto-exclude-tests` and `--auto-exclude-mocks` were in, on by default, and ten days after the issue was opened I closed it saying the tool now "intelligently follows the code path."
+
+What those flags do is match names — drop a package whose path ends in `_test`, `mocks`, `fakes`, `stubs`, plus a few more variations of the same guess buried deeper in. Which misses in both directions at once. It never touched `normalize` and its friends: helpers named like helpers, 97.6% of the tree, all kept — the waste that user was actually waiting on is invisible to a name filter. And in the other direction it ate real API code, because production endpoints get named after what they do. A fake-door A/B test, a sandbox tenant, an indicative — "stub" — price quote: those handlers came out as documented routes with an empty body. I deleted the worst of it in August 2026, ten months on, having never once noticed.
+
+So "no exclusions needed" was true only in the sense that the exclusions had moved somewhere nobody could see them. A guess inside a prune is how routes go silently missing — and that gap, between a prune that's probably right and one that's provably right, is what the rest of this post is about.
+
+Their one question was the correct spec for the work. It took me most of a year to build something that met it, and first I reached for the cheaper levers everyone reaches for.
+
+## Two cheaper fixes, measured
 
 **Make each node smaller.** `LazyNode` is the most numerous allocation in the program, so I reordered fields to squeeze out struct padding — 104 bytes down to 96. That's [a whole post of its own](/go-struct-padding-2-percent), and the honest summary is: **1.7%**. Field ordering fixes bytes-per-item. My problem was items.
 
@@ -287,7 +296,7 @@ I wanted to be sure this was convergence, not a differently-shaped truncation, s
 
 That's the effect I keep coming back to. **When a system truncates under a budget, removing waste doesn't just save time — it converts directly into output.** "Faster *and* more complete" normally smells like marketing. Under a budget it's arithmetic.
 
-It's also, finally, an honest answer to issue #20. The caps and the exclude flags were rationing; this is the tool doing what that user said it should have done from the start — follow the code from the routes and pay only for what can matter.
+It's also, finally, an honest answer to issue #20. The caps rationed and the name matching guessed; this is the tool doing what that user said it should have done from the start — follow the code from the routes and pay only for what can matter.
 
 ## Run it yourself
 
@@ -323,11 +332,17 @@ That fixture is also the regression guard ([PR #348](https://github.com/ehabterr
 
 ## Where the prune runs out
 
-One honest limit before the lessons: on a big enough codebase, the prune saturates. Pointed at [gitea](https://github.com/go-gitea/gitea) — 374 packages, 82,125 call edges — the walk still builds 15.7 million nodes ([issue #389](https://github.com/ehabterra/apispec/issues/389)), because gitea funnels every JSON decode through its own `modules/json` wrapper, so nearly every subtree genuinely *can* reach a match and the predicate degenerates to keep-everything. And to be clear about what the prune did *not* change: survivors are still built once per path, because a node's meaning is path-dependent even when its match-answer isn't — which route it serves, which argument values and generic type parameters flowed in. The barren class was the part you could remove for free; what's left is duplication of *useful* subtrees, and cutting those copies silently drops responses — a status write and its body are paired by the path that reaches them. Making that pairing path-free is #389, and a post of its own.
+One honest limit before the lessons: on a big enough codebase, the prune saturates. Pointed at [gitea](https://github.com/go-gitea/gitea) — 374 packages, 82,125 call edges — the walk still builds 15.7 million nodes ([issue #389](https://github.com/ehabterra/apispec/issues/389)), because gitea funnels every JSON decode through its own `modules/json` wrapper, so nearly every subtree genuinely *can* reach a match and the predicate degenerates to keep-everything.
+
+And to be clear about what the prune did *not* change: survivors are still built once per path, because a node's meaning is path-dependent even when its match-answer isn't — which route it serves, which argument values and generic type parameters flowed in.
+
+The barren class was the part you could remove for free; what's left is duplication of *useful* subtrees, and cutting those copies silently drops responses — a status write and its body are paired by the path that reaches them. Making that pairing path-free is #389, and a post of its own.
 
 ## The runtime experiment, measured
 
-There was a third tempting non-fix I haven't mentioned: wait for the Go runtime, which has been getting faster at exactly this kind of heap. The claims were worth testing rather than trusting. Go 1.26 turned on the [Green Tea garbage collector](https://go.dev/blog/greenteagc) by default — it marks and scans small objects in contiguous 8 KiB spans instead of one at a time, and the release notes expect a **10–40% cut in GC overhead** for GC-heavy programs. Go 1.27 [added size-specialized allocation](https://go.dev/doc/go1.27) for objects under 80 bytes, up to 30% cheaper. A tree of millions of small nodes is squarely Green Tea's target workload — though in a small irony, `LazyNode` has since been squeezed to exactly 80 bytes, missing the sub-80-byte fast path by nothing at all.
+With 15.7 million nodes still standing on gitea, the third tempting non-fix comes back into play: wait for the Go runtime, which has been getting faster at exactly this kind of heap. Like the other two, it was worth measuring rather than trusting.
+
+Go 1.26 turned on the [Green Tea garbage collector](https://go.dev/blog/greenteagc) by default — it marks and scans small objects in contiguous 8 KiB spans instead of one at a time, and the release notes expect a **10–40% cut in GC overhead** for GC-heavy programs. Go 1.27 [added size-specialized allocation](https://go.dev/doc/go1.27) for objects under 80 bytes, up to 30% cheaper. A tree of millions of small nodes is squarely Green Tea's target workload — though in a small irony, `LazyNode` has since been squeezed to exactly 80 bytes, missing the sub-80-byte fast path by nothing at all.
 
 Same commit, both toolchains, runs interleaved, on gitea:
 
@@ -341,12 +356,12 @@ About 1.5% faster — inside the noise — and peak RSS *higher*, not lower. Whi
 
 ## What this taught me
 
-- **The best problem statement was sitting in my own issue tracker.** A user asked in one sentence what took me a year to build, and my first response was to hand them configuration. When your answer to "why is it slow" is a knob, the knob is usually an apology for an algorithm.
+- **The best problem statement was sitting in my own issue tracker.** A user asked in one sentence what took me a year to build. My first answer was configuration, my second was a guess at package names. When your answer to "why is it slow" is a knob, the knob is usually an apology for an algorithm.
 - **Count distinct versus copies before optimising anything.** I guessed "a lot of waste". The counter said 97.6% barren against 1.5% useful, and that ratio is what justified the work — and pointed at the walk itself rather than the cost of a node.
 - **A smaller item doesn't fix a count problem.** Padding was free and permanent and worth 1.7%. A faster runtime is the same lesson, just outsourced: Green Tea and cheaper mallocs shave constants off work that shouldn't exist. Wrong axis, both times.
 - **A more precise answer is not a faster one.** SSA+VTA gave a better call graph for +46% memory. Sometimes the win is doing less, not doing better.
 - **Name the property that makes skipping safe, out loud.** Here it was "matchers read only the call edge". Finding it was the actual work; the loop that exploits it took an afternoon.
-- **Say which direction your approximation errs.** Anything the stand-in withholds can only cause keeping, never dropping. If you can't finish that sentence, you're shipping a heuristic that loses data on a delay.
+- **Say which direction your approximation errs.** Anything the stand-in withholds can only cause keeping, never dropping. If you can't finish that sentence, you're shipping a heuristic that loses data on a delay — which is exactly what my name-matching auto-excludes had been doing.
 - **On a cyclic graph, seed from the goal and go backwards.** The forward memoised DFS was my first draft, and its premature cached negatives would have been the quiet kind of production bug.
 - **Under a budget, saved work is found output.** That's where the extra spec content came from, and I didn't see it coming.
 - **Every fix has a scale where it stops.** On gitea, "can reach a match" is true nearly everywhere and the prune degenerates to keep-everything. Measuring where your own fix saturates is the first step of the next one — #389 is that measurement.
