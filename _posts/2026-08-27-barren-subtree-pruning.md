@@ -328,6 +328,16 @@ paths:
 
 The nine helpers don't appear, because they never could. What changed is that the tool no longer pays to find that out.
 
+You can watch that happen in [apispecui](https://github.com/ehabterra/apispec)'s resolution trace, which draws either structure for a route. Here is the raw call graph for `POST /orders` — every syntactic call out of the handler:
+
+![The call graph for POST /orders: createOrder fanning out to json.NewDecoder, Decoder.Decode, json.NewEncoder, Encoder.Encode and http.ResponseWriter, and alongside them normalize, total, pad, trim, price and surcharge, with classify branching on to score and weigh. 15 nodes, 17 edges](/assets/images/barren-trace-call-graph.png)
+
+And here is the tree apispec built for the same route:
+
+![The same route as the pruned tracker tree: main to ServeMux.HandleFunc to createOrder to the same five json and http calls, and nothing else. 8 nodes, 10 edges](/assets/images/barren-trace-tracker-tree.png)
+
+Fifteen nodes and seventeen edges become eight and ten. The five calls that describe the API survive intact — `main` and `HandleFunc` join them because the tree starts at the route registration, not the handler — and what's gone is the nine helpers, with every edge among them.
+
 That fixture is also the regression guard ([PR #348](https://github.com/ehabterra/apispec/pull/348)): its output is identical with and without pruning, so it's a change detector rather than a test of the speedup. If a future edit to the predicate ever eats a route, it fails loudly. And the prune has an off switch that costs nothing — a nil predicate is the default, and `canReachMatch` then answers `true` unconditionally, so anything wanting the full tree (the diagram server, which never runs the extractor) is untouched.
 
 ## Where the prune runs out
