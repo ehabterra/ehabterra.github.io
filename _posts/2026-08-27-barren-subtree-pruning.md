@@ -384,7 +384,7 @@ Three passes at making the item cheaper, then: field ordering, a newer runtime, 
 
 ## Further reading
 
-Every technique this post used or brushed against, with the reference I'd start from:
+If any of the names below are new, there's a [companion page](/pruning-algorithms/) with a paragraph on each — what it is, and where it shows up here. The references themselves:
 
 - **DAGs versus cycles** — the whole cycle trap in two links: memoisation is safe over a [directed acyclic graph](https://en.wikipedia.org/wiki/Directed_acyclic_graph) and unsafe over a [cycle](https://en.wikipedia.org/wiki/Cycle_(graph_theory)). Collapsing [strongly connected components](https://en.wikipedia.org/wiki/Strongly_connected_component) gets your DAG back, and [Tarjan's algorithm](https://en.wikipedia.org/wiki/Tarjan%27s_strongly_connected_components_algorithm) ("Depth-first search and linear graph algorithms", [SIAM J. Computing 1972](https://doi.org/10.1137/0201010)) does it in a single DFS.
 - **Worklist fixpoints** — the propagate-until-nothing-changes loop goes back to Kildall, ["A Unified Approach to Global Program Optimization"](https://doi.org/10.1145/512927.512945) (POPL 1973); the theory underneath is the [least fixed point](https://en.wikipedia.org/wiki/Least_fixed_point) of a monotone function ([Knaster–Tarski](https://en.wikipedia.org/wiki/Knaster%E2%80%93Tarski_theorem)).
