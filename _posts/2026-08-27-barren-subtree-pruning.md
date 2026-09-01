@@ -98,7 +98,7 @@ Both my answers had been the same confession, and they'd caught it: the walk vis
 
 So I took the job back from them. Within a week `--auto-exclude-tests` and `--auto-exclude-mocks` were in, on by default, and ten days after the issue was opened I closed it saying the tool now "intelligently follows the code path."
 
-What those flags do is match names — drop a package whose path ends in `_test`, `mocks`, `fakes`, `stubs`, plus a few more variations of the same guess buried deeper in. Which misses in both directions at once. It never touched `normalize` and its friends: helpers named like helpers, 97.6% of the tree, all kept — the waste that user was actually waiting on is invisible to a name filter. And in the other direction it ate real API code, because production endpoints get named after what they do. A fake-door A/B test, a sandbox tenant, an indicative — "stub" — price quote: those handlers came out as documented routes with an empty body. I deleted the worst of it in August 2026, ten months on, having never once noticed.
+What those flags do is match names — drop a package whose path ends in `_test`, `mocks`, `fakes`, `stubs`, plus a few more variations of the same guess buried deeper in. Which misses in both directions at once. It never touched `normalize` and its friends: helpers named like helpers, 97.6% of the tree, all kept — the waste that user was actually waiting on is invisible to a name filter. And in the other direction it ate real API code, because production endpoints get named after what they do. A fake-door A/B test, a sandbox tenant, an indicative — "stub" — price quote: those handlers came out as documented routes with an empty body. It took me until August 2026 to notice and delete the worst of it — ten months in which no test ever failed.
 
 So "no exclusions needed" was true only in the sense that the exclusions had moved somewhere nobody could see them. A guess inside a prune is how routes go silently missing — and that gap, between a prune that's probably right and one that's provably right, is what the rest of this post is about.
 
@@ -116,7 +116,7 @@ Their one question was the correct spec for the work. It would be a year before 
 
 It still sits behind a `--resolve-call-graph` flag, off by default, because I set the memory gate before I measured and it failed. Precision is not speed. Quite often it is the opposite: a more accurate answer about more things.
 
-One attempt bought 2%. One made it worse and added a class of bug I'd have to defend. What was left was the option issue #20 had pointed at all along: don't build the nodes at all.
+One attempt bought 1.7%. One made it worse and added a class of bug I'd have to defend. What was left was the option issue #20 had pointed at all along: don't build the nodes at all.
 
 ## The property that makes skipping safe
 
@@ -336,7 +336,7 @@ And the same handler again, as the tree apispec built:
 
 ![The same route as the pruned tracker tree: main to ServeMux.HandleFunc to createOrder to the same five json and http calls, and nothing else. 8 nodes, 10 edges](/assets/images/barren-trace-tracker-tree.png)
 
-One handler, two pictures: fifteen nodes and seventeen edges become eight and ten. The five calls that describe the API survive intact — `main` and `HandleFunc` join them because the tree starts at the route registration, not the handler — and what's gone is the nine helpers, with every edge among them.
+One handler, two pictures: fifteen nodes and seventeen edges become eight and ten. The handler's five `json` and `http` calls survive intact — `main` and `HandleFunc` join them because the tree starts at the route registration, not the handler — and what's gone is the nine helpers, with every edge among them.
 
 That fixture is also the regression guard ([PR #348](https://github.com/ehabterra/apispec/pull/348)): its output is identical with and without pruning, so it's a change detector rather than a test of the speedup. If a future edit to the predicate ever eats a route, it fails loudly. And the prune has an off switch that costs nothing — a nil predicate is the default, and `canReachMatch` then answers `true` unconditionally, so anything wanting the full tree (the diagram server, which never runs the extractor) is untouched.
 
@@ -374,7 +374,7 @@ Three passes at making the item cheaper, then: field ordering, a newer runtime, 
 
 - **The best problem statement was sitting in my own issue tracker.** A user asked in one sentence for the thing I would not build for another year. My first answer was configuration, my second was a guess at package names. When your answer to "why is it slow" is a knob, the knob is usually an apology for an algorithm.
 - **Count distinct versus copies before optimising anything.** I guessed "a lot of waste". The counter said 97.6% barren against 1.5% useful, and that ratio is what justified the work — and pointed at the walk itself rather than the cost of a node.
-- **A smaller item doesn't fix a count problem.** Padding was free and permanent and worth 1.7%; interning the node key took another size class off for 7.5%. A faster runtime is the same lesson, just outsourced: Green Tea and cheaper mallocs shave constants off work that shouldn't exist. Wrong axis, both times.
+- **A smaller item doesn't fix a count problem.** Padding was free and permanent and worth 1.7%; interning the node key took another size class off for 7.5%. A faster runtime is the same lesson, just outsourced: Green Tea and cheaper mallocs shave constants off work that shouldn't exist. Wrong axis, every time.
 - **A more precise answer is not a faster one.** SSA+VTA gave a better call graph for +46% memory. Sometimes the win is doing less, not doing better.
 - **Name the property that makes skipping safe, out loud.** Here it was "matchers read only the call edge". Finding it was the actual work; the loop that exploits it took an afternoon.
 - **Say which direction your approximation errs.** Anything the stand-in withholds can only cause keeping, never dropping. If you can't finish that sentence, you're shipping a heuristic that loses data on a delay — which is exactly what my name-matching auto-excludes had been doing.
