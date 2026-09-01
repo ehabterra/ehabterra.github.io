@@ -102,7 +102,7 @@ What those flags do is match names — drop a package whose path ends in `_test`
 
 So "no exclusions needed" was true only in the sense that the exclusions had moved somewhere nobody could see them. A guess inside a prune is how routes go silently missing — and that gap, between a prune that's probably right and one that's provably right, is what the rest of this post is about.
 
-Their one question was the correct spec for the work. It took me most of a year to build something that met it, and first I reached for the cheaper levers everyone reaches for.
+Their one question was the correct spec for the work. It would be a year before I met it — the releases in between went to security schemes, parameter coverage, better resolution, the rest of a tool that had more wrong with it than speed — and when I did come back, I reached first for the cheaper levers everyone reaches for.
 
 ## Two cheaper fixes, measured
 
@@ -352,7 +352,7 @@ The barren class was the part you could remove for free; what's left is duplicat
 
 With 15.7 million nodes still standing on gitea, the third tempting non-fix comes back into play: wait for the Go runtime, which has been getting faster at exactly this kind of heap. Like the other two, it was worth measuring rather than trusting.
 
-Go 1.26 turned on the [Green Tea garbage collector](https://go.dev/blog/greenteagc) by default — it marks and scans small objects in contiguous 8 KiB spans instead of one at a time, and the release notes expect a **10–40% cut in GC overhead** for GC-heavy programs. Go 1.27 [added size-specialized allocation](https://go.dev/doc/go1.27) for objects under 80 bytes, up to 30% cheaper. A tree of millions of small nodes is squarely Green Tea's target workload — though in a small irony, `LazyNode` has since been squeezed to exactly 80 bytes, missing the sub-80-byte fast path by nothing at all.
+Go 1.26 turned on the [Green Tea garbage collector](https://go.dev/blog/greenteagc) by default — it marks and scans small objects in contiguous 8 KiB spans instead of one at a time, and the release notes expect a **10–40% cut in GC overhead** for GC-heavy programs. Go 1.27 [added size-specialized allocation](https://go.dev/doc/go1.27) for objects under 80 bytes, up to 30% cheaper. A tree of millions of small nodes is squarely Green Tea's target workload.
 
 Same commit, both toolchains, runs interleaved, on gitea:
 
@@ -362,13 +362,17 @@ go1.26.0     1m35.8s / 1m38.1s          4.50 / 5.13 GB
 go1.27.0     1m34.9s / 1m35.7s          5.01 / 5.71 GB
 ```
 
-About 1.5% faster — inside the noise — and peak RSS *higher*, not lower. Which agrees with everything GC tuning had already said: at GOGC 100, 300 and 600 the run was flat (13.7s / 13.7s / 14.1s) while RSS climbed 1.35 → 1.80 GB, and on the 163-route service `GOGC=off` was actually *slower* (8.3s vs 6.3s). The heap isn't churning; it's **live** — millions of nodes retained at once because each node caches its children for the life of the walk — so there is nothing for a collector to trade. The runtime makes each node cheaper. The lever is, and stays, the node count.
+About 1.5% faster — inside the noise — and peak RSS *higher*, not lower. Which agrees with everything GC tuning had already said: at GOGC 100, 300 and 600 the run was flat (13.7s / 13.7s / 14.1s) while RSS climbed 1.35 → 1.80 GB, and on the 163-route service `GOGC=off` was actually *slower* (8.3s vs 6.3s). The heap isn't churning; it's **live** — millions of nodes retained at once because each node caches its children for the life of the walk — so there is nothing for a collector to trade.
+
+One caveat that table owes you. `LazyNode` was exactly 80 bytes when I ran it, so it missed 1.27's sub-80-byte path by a single byte and the comparison never tested that half of the release. It is 72 bytes now — interning the node key to an `int32` handle ([PR #418](https://github.com/ehabterra/apispec/pull/418)) took it a size class down — which bought **7.5%** off the mapping stage and **4.4%** off peak RSS, output byte-identical. Third attempt at a smaller item, third result in the same range, and the count sitting exactly where it was: 15.7 million.
+
+The runtime makes each node cheaper. So does a smaller node. The lever is, and stays, the node count.
 
 ## What this taught me
 
-- **The best problem statement was sitting in my own issue tracker.** A user asked in one sentence what took me a year to build. My first answer was configuration, my second was a guess at package names. When your answer to "why is it slow" is a knob, the knob is usually an apology for an algorithm.
+- **The best problem statement was sitting in my own issue tracker.** A user asked in one sentence for the thing I would not build for another year. My first answer was configuration, my second was a guess at package names. When your answer to "why is it slow" is a knob, the knob is usually an apology for an algorithm.
 - **Count distinct versus copies before optimising anything.** I guessed "a lot of waste". The counter said 97.6% barren against 1.5% useful, and that ratio is what justified the work — and pointed at the walk itself rather than the cost of a node.
-- **A smaller item doesn't fix a count problem.** Padding was free and permanent and worth 1.7%. A faster runtime is the same lesson, just outsourced: Green Tea and cheaper mallocs shave constants off work that shouldn't exist. Wrong axis, both times.
+- **A smaller item doesn't fix a count problem.** Padding was free and permanent and worth 1.7%; interning the node key took another size class off for 7.5%. A faster runtime is the same lesson, just outsourced: Green Tea and cheaper mallocs shave constants off work that shouldn't exist. Wrong axis, both times.
 - **A more precise answer is not a faster one.** SSA+VTA gave a better call graph for +46% memory. Sometimes the win is doing less, not doing better.
 - **Name the property that makes skipping safe, out loud.** Here it was "matchers read only the call edge". Finding it was the actual work; the loop that exploits it took an afternoon.
 - **Say which direction your approximation errs.** Anything the stand-in withholds can only cause keeping, never dropping. If you can't finish that sentence, you're shipping a heuristic that loses data on a delay — which is exactly what my name-matching auto-excludes had been doing.
