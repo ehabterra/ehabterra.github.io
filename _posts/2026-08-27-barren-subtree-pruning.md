@@ -98,11 +98,11 @@ Both my answers had been the same confession, and they'd caught it: the walk vis
 
 So I took the job back from them. Within a week `--auto-exclude-tests` and `--auto-exclude-mocks` were in, on by default, and ten days after the issue was opened I closed it saying the tool now "intelligently follows the code path."
 
-What those flags do is match names — drop a package whose path ends in `_test`, `mocks`, `fakes`, `stubs`, plus a few more variations of the same guess buried deeper in. Which misses in both directions at once. It never touched `normalize` and its friends: helpers named like helpers, 97.6% of the tree, all kept — the waste that user was actually waiting on is invisible to a name filter. And in the other direction it ate real API code, because production endpoints get named after what they do. A fake-door A/B test, a sandbox tenant, an indicative — "stub" — price quote: those handlers came out as documented routes with an empty body. I deleted the worst of it in August 2026, ten months on, having never once noticed.
+What those flags do is match names — drop a package whose path ends in `_test`, `mocks`, `fakes`, `stubs`, plus a few more variations of the same guess buried deeper in. Which misses in both directions at once. It never touched `normalize` and its friends: helpers named like helpers, 97.6% of the tree, all kept — the waste that user was actually waiting on is invisible to a name filter. And in the other direction it ate real API code, because production endpoints get named after what they do. A fake-door A/B test, a sandbox tenant, an indicative — "stub" — price quote: those handlers came out as documented routes with an empty body. It took me until August 2026 to notice and delete the worst of it — ten months in which no test ever failed.
 
 So "no exclusions needed" was true only in the sense that the exclusions had moved somewhere nobody could see them. A guess inside a prune is how routes go silently missing — and that gap, between a prune that's probably right and one that's provably right, is what the rest of this post is about.
 
-Their one question was the correct spec for the work. It took me most of a year to build something that met it, and first I reached for the cheaper levers everyone reaches for.
+Their one question was the correct spec for the work. It would be a year before I met it — the releases in between went to security schemes, parameter coverage, better resolution, the rest of a tool that had more wrong with it than speed — and when I did come back, I reached first for the cheaper levers everyone reaches for.
 
 ## Two cheaper fixes, measured
 
@@ -116,7 +116,7 @@ Their one question was the correct spec for the work. It took me most of a year 
 
 It still sits behind a `--resolve-call-graph` flag, off by default, because I set the memory gate before I measured and it failed. Precision is not speed. Quite often it is the opposite: a more accurate answer about more things.
 
-One attempt bought 2%. One made it worse and added a class of bug I'd have to defend. What was left was the option issue #20 had pointed at all along: don't build the nodes at all.
+One attempt bought 1.7%. One made it worse and added a class of bug I'd have to defend. What was left was the option issue #20 had pointed at all along: don't build the nodes at all.
 
 ## The property that makes skipping safe
 
@@ -328,7 +328,17 @@ paths:
 
 The nine helpers don't appear, because they never could. What changed is that the tool no longer pays to find that out.
 
-That fixture is also the regression guard ([PR #348](https://github.com/ehabterra/apispec/pull/348)): its output is identical with and without pruning, so it's a change detector rather than a test of the speedup. If a future edit to the predicate ever eats a route, it fails loudly. And the prune has an off switch that costs nothing — a nil predicate is the default, and `canReachMatch` then answers `true` unconditionally, so anything wanting the full tree (the diagram server, which never runs the extractor) is untouched.
+Both pictures below are that same fixture — the `createOrder` handler behind `POST /orders`, from the top of this post — in [apispecui](https://github.com/ehabterra/apispec)'s resolution trace, which will draw a route from either structure. The raw call graph first, every syntactic call out of the handler:
+
+![The call graph as apispec records it: createOrder fanning out to json.NewDecoder, Decoder.Decode, json.NewEncoder, Encoder.Encode and http.ResponseWriter, and alongside them normalize, total, pad, trim, price and surcharge, with classify branching on to score and weigh. 15 nodes, 17 edges](/assets/images/barren-trace-call-graph.png)
+
+And the same handler again, as the tree apispec built:
+
+![The same route as the pruned tracker tree: main to ServeMux.HandleFunc to createOrder to the same five json and http calls, and nothing else. 8 nodes, 10 edges](/assets/images/barren-trace-tracker-tree.png)
+
+One handler, two pictures: fifteen nodes and seventeen edges become eight and ten. The handler's five `json` and `http` calls survive intact — `main` and `HandleFunc` join them because the tree starts at the route registration, not the handler — and what's gone is the nine helpers, with every edge among them.
+
+That fixture is also the regression guard ([PR #348](https://github.com/ehabterra/apispec/pull/348)): its output is identical with and without pruning, so it's a change detector rather than a test of the speedup. If a future edit to the predicate ever eats a route, it fails loudly. And the prune has an off switch that costs nothing — a nil predicate is the default, and [`canReachMatch`](https://github.com/ehabterra/apispec/blob/main/internal/spec/prune.go) then answers `true` unconditionally, so anything wanting the full tree (the diagram server, which never runs the extractor) is untouched.
 
 ## Where the prune runs out
 
@@ -340,9 +350,9 @@ The barren class was the part you could remove for free; what's left is duplicat
 
 ## The runtime experiment, measured
 
-With 15.7 million nodes still standing on gitea, the third tempting non-fix comes back into play: wait for the Go runtime, which has been getting faster at exactly this kind of heap. Like the other two, it was worth measuring rather than trusting.
+With 15.7 million nodes still standing on gitea, the third tempting non-fix comes back into play: wait for the Go runtime, which has been getting faster at exactly this kind of heap. Like the other two, it deserved measuring rather than trusting.
 
-Go 1.26 turned on the [Green Tea garbage collector](https://go.dev/blog/greenteagc) by default — it marks and scans small objects in contiguous 8 KiB spans instead of one at a time, and the release notes expect a **10–40% cut in GC overhead** for GC-heavy programs. Go 1.27 [added size-specialized allocation](https://go.dev/doc/go1.27) for objects under 80 bytes, up to 30% cheaper. A tree of millions of small nodes is squarely Green Tea's target workload — though in a small irony, `LazyNode` has since been squeezed to exactly 80 bytes, missing the sub-80-byte fast path by nothing at all.
+Go 1.26 turned on the [Green Tea garbage collector](https://go.dev/blog/greenteagc) by default — it marks and scans small objects in contiguous 8 KiB spans instead of one at a time, and the release notes expect a **10–40% cut in GC overhead** for GC-heavy programs. Go 1.27 [added size-specialized allocation](https://go.dev/doc/go1.27) for objects under 80 bytes, up to 30% cheaper. Millions of small nodes on one heap is squarely what both were written for — except that `LazyNode` was exactly 80 bytes at the time, one byte the wrong side of that threshold, so what follows tests Green Tea and not the allocator.
 
 Same commit, both toolchains, runs interleaved, on gitea:
 
@@ -352,13 +362,19 @@ go1.26.0     1m35.8s / 1m38.1s          4.50 / 5.13 GB
 go1.27.0     1m34.9s / 1m35.7s          5.01 / 5.71 GB
 ```
 
-About 1.5% faster — inside the noise — and peak RSS *higher*, not lower. Which agrees with everything GC tuning had already said: at GOGC 100, 300 and 600 the run was flat (13.7s / 13.7s / 14.1s) while RSS climbed 1.35 → 1.80 GB, and on the 163-route service `GOGC=off` was actually *slower* (8.3s vs 6.3s). The heap isn't churning; it's **live** — millions of nodes retained at once because each node caches its children for the life of the walk — so there is nothing for a collector to trade. The runtime makes each node cheaper. The lever is, and stays, the node count.
+About 1.5% faster — inside the noise — and peak RSS *higher*, not lower.
+
+Which agrees with everything GC tuning had already said. At GOGC 100, 300 and 600 the run was flat (13.7s / 13.7s / 14.1s) while RSS climbed 1.35 → 1.80 GB, and on the 163-route service `GOGC=off` was actually *slower* (8.3s vs 6.3s). The heap isn't churning; it's **live** — millions of nodes retained at once, because each node caches its children for the life of the walk. A collector can only trade against garbage, and there isn't any.
+
+So I took the byte off myself. Interning the node key to an `int32` handle ([PR #418](https://github.com/ehabterra/apispec/pull/418)) brought `LazyNode` to 72 bytes — a whole size class down, and on the right side of that threshold at last. It bought **7.5%** off the mapping stage and **4.4%** off peak RSS, output byte-identical.
+
+Three passes at making the item cheaper, then: field ordering, a newer runtime, a smaller key — 1.7%, 1.5%, 7.5%, and the node count sitting exactly where it started at 15.7 million. The runtime makes each node cheaper. So does a smaller node. The lever is, and stays, the count.
 
 ## What this taught me
 
-- **The best problem statement was sitting in my own issue tracker.** A user asked in one sentence what took me a year to build. My first answer was configuration, my second was a guess at package names. When your answer to "why is it slow" is a knob, the knob is usually an apology for an algorithm.
+- **The best problem statement was sitting in my own issue tracker.** A user asked in one sentence for the thing I would not build for another year. My first answer was configuration, my second was a guess at package names. When your answer to "why is it slow" is a knob, the knob is usually an apology for an algorithm.
 - **Count distinct versus copies before optimising anything.** I guessed "a lot of waste". The counter said 97.6% barren against 1.5% useful, and that ratio is what justified the work — and pointed at the walk itself rather than the cost of a node.
-- **A smaller item doesn't fix a count problem.** Padding was free and permanent and worth 1.7%. A faster runtime is the same lesson, just outsourced: Green Tea and cheaper mallocs shave constants off work that shouldn't exist. Wrong axis, both times.
+- **A smaller item doesn't fix a count problem.** Padding was free and permanent and worth 1.7%; interning the node key took another size class off for 7.5%. A faster runtime is the same lesson, just outsourced: Green Tea and cheaper mallocs shave constants off work that shouldn't exist. Wrong axis, every time.
 - **A more precise answer is not a faster one.** SSA+VTA gave a better call graph for +46% memory. Sometimes the win is doing less, not doing better.
 - **Name the property that makes skipping safe, out loud.** Here it was "matchers read only the call edge". Finding it was the actual work; the loop that exploits it took an afternoon.
 - **Say which direction your approximation errs.** Anything the stand-in withholds can only cause keeping, never dropping. If you can't finish that sentence, you're shipping a heuristic that loses data on a delay — which is exactly what my name-matching auto-excludes had been doing.
@@ -368,7 +384,7 @@ About 1.5% faster — inside the noise — and peak RSS *higher*, not lower. Whi
 
 ## Further reading
 
-Every technique this post used or brushed against, with the reference I'd start from:
+If any of the names below are new, there's a [companion page](/pruning-algorithms/) with a paragraph on each — what it is, and where it shows up here. The references themselves:
 
 - **DAGs versus cycles** — the whole cycle trap in two links: memoisation is safe over a [directed acyclic graph](https://en.wikipedia.org/wiki/Directed_acyclic_graph) and unsafe over a [cycle](https://en.wikipedia.org/wiki/Cycle_(graph_theory)). Collapsing [strongly connected components](https://en.wikipedia.org/wiki/Strongly_connected_component) gets your DAG back, and [Tarjan's algorithm](https://en.wikipedia.org/wiki/Tarjan%27s_strongly_connected_components_algorithm) ("Depth-first search and linear graph algorithms", [SIAM J. Computing 1972](https://doi.org/10.1137/0201010)) does it in a single DFS.
 - **Worklist fixpoints** — the propagate-until-nothing-changes loop goes back to Kildall, ["A Unified Approach to Global Program Optimization"](https://doi.org/10.1145/512927.512945) (POPL 1973); the theory underneath is the [least fixed point](https://en.wikipedia.org/wiki/Least_fixed_point) of a monotone function ([Knaster–Tarski](https://en.wikipedia.org/wiki/Knaster%E2%80%93Tarski_theorem)).
@@ -381,4 +397,4 @@ Every technique this post used or brushed against, with the reference I'd start 
 
 ---
 
-*The implementation is `internal/spec/prune.go` [in the repo](https://github.com/ehabterra/apispec), with the soundness argument in the doc comments — issue #318, PR #348. The sequel — what's left after the prune, and why it's harder — is [issue #389](https://github.com/ehabterra/apispec/issues/389).*
+*The implementation is [`internal/spec/prune.go`](https://github.com/ehabterra/apispec/blob/main/internal/spec/prune.go), with the soundness argument in the doc comments — [issue #318](https://github.com/ehabterra/apispec/issues/318), [PR #348](https://github.com/ehabterra/apispec/pull/348). The sequel — what's left after the prune, and why it's harder — is [issue #389](https://github.com/ehabterra/apispec/issues/389).*
