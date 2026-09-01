@@ -338,7 +338,7 @@ And the same handler again, as the tree apispec built:
 
 One handler, two pictures: fifteen nodes and seventeen edges become eight and ten. The handler's five `json` and `http` calls survive intact — `main` and `HandleFunc` join them because the tree starts at the route registration, not the handler — and what's gone is the nine helpers, with every edge among them.
 
-That fixture is also the regression guard ([PR #348](https://github.com/ehabterra/apispec/pull/348)): its output is identical with and without pruning, so it's a change detector rather than a test of the speedup. If a future edit to the predicate ever eats a route, it fails loudly. And the prune has an off switch that costs nothing — a nil predicate is the default, and `canReachMatch` then answers `true` unconditionally, so anything wanting the full tree (the diagram server, which never runs the extractor) is untouched.
+That fixture is also the regression guard ([PR #348](https://github.com/ehabterra/apispec/pull/348)): its output is identical with and without pruning, so it's a change detector rather than a test of the speedup. If a future edit to the predicate ever eats a route, it fails loudly. And the prune has an off switch that costs nothing — a nil predicate is the default, and [`canReachMatch`](https://github.com/ehabterra/apispec/blob/main/internal/spec/prune.go) then answers `true` unconditionally, so anything wanting the full tree (the diagram server, which never runs the extractor) is untouched.
 
 ## Where the prune runs out
 
@@ -397,4 +397,4 @@ If any of the names below are new, there's a [companion page](/pruning-algorithm
 
 ---
 
-*The implementation is `internal/spec/prune.go` [in the repo](https://github.com/ehabterra/apispec), with the soundness argument in the doc comments — issue #318, PR #348. The sequel — what's left after the prune, and why it's harder — is [issue #389](https://github.com/ehabterra/apispec/issues/389).*
+*The implementation is [`internal/spec/prune.go`](https://github.com/ehabterra/apispec/blob/main/internal/spec/prune.go), with the soundness argument in the doc comments — [issue #318](https://github.com/ehabterra/apispec/issues/318), [PR #348](https://github.com/ehabterra/apispec/pull/348). The sequel — what's left after the prune, and why it's harder — is [issue #389](https://github.com/ehabterra/apispec/issues/389).*
